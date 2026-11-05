@@ -31,14 +31,39 @@ if (fs.existsSync(SUBS_FILE)) {
     }
 }
 
+const MANIFEST_JSON = JSON.stringify({
+    name: "Журнал событий МСБ55115",
+    short_name: "МСБ55115",
+    start_url: "/",
+    scope: "/",
+    display: "standalone",
+    background_color: "#0f172a",
+    theme_color: "#0f172a",
+    icons: [
+        {
+            src: "/icon.svg",
+            sizes: "192x192 512x512",
+            type: "image/svg+xml",
+            purpose: "any maskable"
+        }
+    ]
+});
+
+const ICON_SVG = '<svg xmlns="http://w3.org" viewBox="0 0 512 512"><rect width="512" height="512" rx="100" fill="#0f172a"/><rect x="40" y="40" width="432" height="432" rx="80" fill="#1e293b" stroke="#3b82f6" stroke-width="16"/><text x="256" y="240" font-family="monospace, sans-serif" font-size="110" font-weight="bold" fill="#f1f5f9" text-anchor="middle">МСБ</text><text x="256" y="360" font-family="monospace, sans-serif" font-size="95" font-weight="bold" fill="#3b82f6" text-anchor="middle">55115</text></svg>';
+
 const SW_CODE = [
     "self.addEventListener('install', function(e) { self.skipWaiting(); });",
     "self.addEventListener('activate', function(e) { e.waitUntil(clients.claim()); });",
+    "self.addEventListener('fetch', function(event) {",
+    "    if (event.request.method !== 'GET') return;",
+    "    event.respondWith(fetch(event.request).catch(function() { return caches.match(event.request); }));",
+    "});",
     "self.addEventListener('push', function(event) {",
     "    var data = { title: '🛑 СООБЩЕНИЕ В ЖУРНАЛЕ!', body: 'Срочно откройте журнал!' };",
     "    if (event.data) { try { data = event.data.json(); } catch (e) {} }",
     "    event.waitUntil(self.registration.showNotification(data.title, {",
     "        body: data.body,",
+    "        icon: '/icon.svg',",
     "        vibrate: Array.of(800, 200, 800, 200, 800, 200, 1000),",
     "        silent: false,",
     "        requireInteraction: true,",
@@ -50,6 +75,7 @@ const SW_CODE = [
     "    if (event.data && event.data.type === 'SHOW_NOTIFICATION') {",
     "        self.registration.showNotification(event.data.title, {",
     "            body: event.data.body,",
+    "            icon: '/icon.svg',",
     "            vibrate: Array.of(800, 200, 800, 200, 800, 200, 1000),",
     "            silent: false,",
     "            requireInteraction: true,",
@@ -78,7 +104,17 @@ const server = http.createServer(function(req, res) {
         res.end(SW_CODE);
         return;
     }
-    if (req.url === '/') {
+    if (req.url && req.url.indexOf('/manifest.json') === 0) {
+        res.writeHead(200, { 'Content-Type': 'application/manifest+json; charset=utf-8' });
+        res.end(MANIFEST_JSON);
+        return;
+    }
+    if (req.url && req.url.indexOf('/icon.svg') === 0) {
+        res.writeHead(200, { 'Content-Type': 'image/svg+xml; charset=utf-8' });
+        res.end(ICON_SVG);
+        return;
+    }
+    if (req.url === '/' || req.url.indexOf('/?') === 0) {
         fs.readFile('index.html', function(err, data) {
             if (err) { 
                 res.writeHead(500); 
@@ -162,7 +198,6 @@ wss.on('connection', function(ws) {
                     }
                 });
             }
-
             if (msg.type === 'admin_alert') {
                 const sender = msg.sender || 'АДМИН';
                 const color = msg.color || '#ef4444';
