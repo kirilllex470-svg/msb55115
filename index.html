@@ -9,8 +9,8 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="МСБ55115">
     <link rel="manifest" href="/manifest.json">
-    <link rel="icon" type="image/svg+xml" href="/icon.svg">
-    <link rel="apple-touch-icon" href="/icon.svg">
+    <link rel="icon" type="image/png" href="/icon-192.png">
+    <link rel="apple-touch-icon" href="/icon-192.png">
     <title>МСБ55115</title>
     <style>
         :root { --bg: #0f172a; --panel: #1e293b; --accent: #3b82f6; --text: #f1f5f9; --border: #334155; --danger: #ef4444; }
@@ -22,7 +22,8 @@
         .login-box button:hover { background: #2563eb; }
         .viewer-btn { background: transparent !important; border: 1px solid #475569 !important; color: #94a3b8 !important; margin-top: 15px; }
         .viewer-btn:hover { background: #1e293b !important; color: white !important; }
-        .install-btn { display: inline-block; width: 100%; background: #10b981 !important; color: white !important; border: none !important; margin-top: 15px; padding: 12px 15px; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 14px; box-sizing: border-box; }
+        .install-btn { display: none; width: 100%; background: #10b981 !important; color: white !important; border: none !important; margin-top: 15px; padding: 12px 15px; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 14px; box-sizing: border-box; }
+        .error-msg { color: var(--danger); font-size: 14px; margin-top: 10px; display: none; }
         .input-panel { background: var(--panel); padding: 25px; border-radius: 12px; border: 1px solid var(--border); width: 100%; max-width: 1200px; margin-bottom: 30px; display: none; box-sizing: border-box; }
         .inputs-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 15px; margin-bottom: 20px; }
         .field-group label { display: block; font-size: 13px; color: #94a3b8; margin-bottom: 5px; font-weight: bold; }
@@ -65,42 +66,42 @@
             <h1 style="font-size: 40px; margin: 0;">🛑 СООБЩЕНИЕ!</h1>
             <p id="alert-target-label" style="font-size: 18px; margin-top: 10px; font-weight: bold;">ВАМ ПИШУТ:</p>
             <h2 id="alert-text" style="font-size: 32px; border-top: 2px solid #b91c1c; border-bottom: 2px solid #b91c1c; padding: 20px;">...</h2>
-            <button class="alert-btn" onclick="confirmAlert()">ДА, Я ПОНЯЛ</button>
+            <button type="button" class="alert-btn" onclick="confirmAlert()">ДА, Я ПОНЯЛ</button>
         </div>
     </div>
     <div id="login-overlay">
         <div class="login-box">
             <h2 style="color:white; margin-top:0;">🔐 Доступ в МСБ55115</h2>
             <div style="text-align: left; color: #94a3b8; font-size: 13px; margin-bottom: 5px;">Подразделение:</div>
-            <select id="login-select"></select>
+            <select id="login-select" onchange="document.getElementById('login-error').style.display='none'"></select>
             <div style="text-align: left; color: #94a3b8; font-size: 13px; margin-bottom: 5px;">Пароль:</div>
-            <input type="password" id="login-pass" placeholder="••••">
-            <button onclick="attemptLogin()">ВОЙТИ</button>
-            <button class="viewer-btn" onclick="loginAsViewer()">Просто смотреть</button>
-            <button class="install-btn pwa-install-btn" onclick="installPWA()">📲 УСТАНОВИТЬ ПРИЛОЖЕНИЕ</button>
-            <div id="login-error" class="error-msg">❌ Неверный пароль</div>
+            <input type="password" id="login-pass" placeholder="••••" autocomplete="off" oninput="document.getElementById('login-error').style.display='none'">
+            <button type="button" onclick="attemptLogin()">ВОЙТИ</button>
+            <button type="button" class="viewer-btn" onclick="loginAsViewer()">Просто смотреть</button>
+            <button type="button" class="install-btn pwa-install-btn" onclick="installPWA()">📲 УСТАНОВИТЬ ПРИЛОЖЕНИЕ</button>
+            <div id="login-error" style="color: #ef4444; font-size: 14px; margin-top: 10px; display: none;">❌ Неверный пароль</div>
         </div>
     </div>
     <div class="input-panel" id="input-panel">
         <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:15px;">
             <h3 style="margin:0;">📝 ПОДРАЗДЕЛЕНИЕ: <span id="my-name"></span></h3>
             <div style="display:flex; gap:10px;">
-                <button class="install-btn pwa-install-btn" style="margin-top:0; padding:8px 15px;" onclick="installPWA()">📲 Установить</button>
-                <button onclick="logoutUser()" style="background:#334155; color:white; border:none; padding:8px 15px; border-radius:6px; cursor:pointer; font-weight:bold;">Выход</button>
+                <button type="button" class="install-btn pwa-install-btn" style="width:auto; margin-top:0; padding:8px 15px;" onclick="installPWA()">📲 Установить</button>
+                <button type="button" onclick="logoutUser()" style="background:#334155; color:white; border:none; padding:8px 15px; border-radius:6px; cursor:pointer; font-weight:bold;">Выход</button>
             </div>
         </div>
         <div class="inputs-grid" id="dynamic-inputs"></div>
-        <button class="send-btn" onclick="submitRow()">📤 ЗАПИСАТЬ В ЖУРНАЛ</button>
+        <button type="button" class="send-btn" onclick="submitRow()">📤 ЗАПИСАТЬ В ЖУРНАЛ</button>
         <div id="admin-zone">
             <h3 style="color: #ef4444; margin-top: 0;">⚡ УПРАВЛЕНИЕ И СВЯЗЬ</h3>
             <div style="color: #fca5a5; margin-bottom: 10px; font-size: 14px;">Отправить уведомление подразделению:</div>
             <div class="admin-controls">
                 <select id="admin-target"></select>
                 <input type="text" id="admin-msg" placeholder="Напишите сообщение или замечание...">
-                <button onclick="sendAdminAlert()">ОТПРАВИТЬ</button>
+                <button type="button" onclick="sendAdminAlert()">ОТПРАВИТЬ</button>
             </div>
             <div id="clear-history-box" style="display: none; margin-top: 15px; padding-top: 15px; border-top: 1px solid rgba(239, 68, 68, 0.3);">
-                <button onclick="clearHistoryAdmin()" style="width: 100%; padding: 12px; background: #7f1d1d; color: #fecaca; border: 1px solid #ef4444; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 15px;">🗑️ ОЧИСТИТЬ ЖУРНАЛ СОБЫТИЙ ПОЛНОСТЬЮ</button>
+                <button type="button" onclick="clearHistoryAdmin()" style="width: 100%; padding: 12px; background: #7f1d1d; color: #fecaca; border: 1px solid #ef4444; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 15px;">🗑️ ОЧИСТИТЬ ЖУРНАЛ СОБЫТИЙ ПОЛНОСТЬЮ</button>
             </div>
         </div>
     </div>
@@ -194,15 +195,14 @@
     });
 
     async function installPWA() {
-        if (deferredPrompt) {
-            deferredPrompt.prompt();
-            await deferredPrompt.userChoice;
-            deferredPrompt = null;
-        } else {
-            alert("📲 Как установить приложение на главный экран:\n\n• На Android / ПК (Chrome, Яндекс, Edge): нажмите на меню браузера (три точки ⋮ в углу экрана) и выберите «Установить приложение» или «Добавить на главный экран».\n\n• На iPhone (Safari): нажмите кнопку «Поделиться» (квадрат со стрелкой вверх внизу) и выберите «На экран Домой».");
-        }
+        if (!deferredPrompt) return;
+        deferredPrompt.prompt();
+        await deferredPrompt.userChoice;
+        deferredPrompt = null;
+        document.querySelectorAll('.pwa-install-btn').forEach(function(btn) {
+            btn.style.display = 'none';
+        });
     }
-
 
     function urlBase64ToUint8Array(base64String) {
         const padding = '='.repeat((4 - base64String.length % 4) % 4);
@@ -220,7 +220,7 @@
             const permission = await Notification.requestPermission();
             if (permission !== 'granted') return;
 
-            const reg = await navigator.serviceWorker.register('/sw.js?v=7');
+            const reg = await navigator.serviceWorker.register('/sw.js');
             await reg.update();
             const readyReg = await navigator.serviceWorker.ready;
 
@@ -416,8 +416,10 @@
     }
 
     function initApp() {
+        document.getElementById('login-error').style.display = 'none';
+
         if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('/sw.js?v=7').catch(function() {});
+            navigator.serviceWorker.register('/sw.js').catch(function() {});
         }
 
         document.body.addEventListener('click', function firstTouch() {
@@ -477,11 +479,12 @@
 
     function attemptLogin() {
         unlockMobileFeatures();
-        const userIndex = document.getElementById('login-select').value;
-        const pass = document.getElementById('login-pass').value;
-        const user = USERS_CONFIG[userIndex];
+        const userIndex = Number(document.getElementById('login-select').value);
+        const pass = document.getElementById('login-pass').value.trim();
+        const user = USERS_CONFIG.at(userIndex);
 
         if (user && pass === user.pass) {
+            document.getElementById('login-error').style.display = 'none';
             currentUser = user.name;
             userColor = user.color;
             localStorage.setItem('journal_user', currentUser);
@@ -494,7 +497,7 @@
             document.getElementById('login-error').style.display = 'block';
         }
     }
-       function logoutUser() {
+    function logoutUser() {
         localStorage.removeItem('journal_user');
         localStorage.removeItem('journal_color');
         location.reload();
@@ -559,7 +562,7 @@
                 }
             } else {
                 const targets = Object.keys(pendingAlerts);
-                if (targets.length > 0) targetToShow = targets[0];
+                if (targets.length > 0) targetToShow = targets.at(0);
             }
         }
 
@@ -625,9 +628,9 @@
         const timeString = now.toLocaleDateString() + ' ' + now.toLocaleTimeString().slice(0, 5);
         
         let ackValues = new Array(COLUMNS_CONFIG.length).fill("-");
-        ackValues[0] = "✅ ОЗНАКОМЛЕН";
-        ackValues[1] = "ОТ: " + (currentAlertSender || ADMIN_NAME);
-        ackValues[ackValues.length - 1] = 'Сообщение: ' + currentAlertText;
+        ackValues.splice(0, 1, "✅ ОЗНАКОМЛЕН");
+        ackValues.splice(1, 1, "ОТ: " + (currentAlertSender || ADMIN_NAME));
+        ackValues.splice(ackValues.length - 1, 1, 'Сообщение: ' + currentAlertText);
 
         ws.send(JSON.stringify({
             type: 'add_row',
@@ -646,7 +649,7 @@
         let isEmpty = true;
         for (let i = 0; i < COLUMNS_CONFIG.length; i++) {
             let val = document.getElementById('in-' + i).value;
-            if (COLUMNS_CONFIG[i].digitsOnly && val) {
+            if (COLUMNS_CONFIG.at(i).digitsOnly && val) {
                 val = val.replace(/[^0-9]/g, '');
             }
             values.push(val);
@@ -670,8 +673,8 @@
         const tbody = document.getElementById('table-body');
         const tr = document.createElement('tr');
         tr.className = 'new-row';
-        if (row.values && row.values[0]) {
-            const firstCol = String(row.values[0]);
+        if (row.values && row.values.at(0)) {
+            const firstCol = String(row.values.at(0));
             if (firstCol.indexOf("ОЗНАКОМЛЕН") !== -1) {
                 tr.classList.add('ack-row');
             } else if (firstCol.indexOf("УВЕДОМЛЕНИЕ") !== -1) {
@@ -681,7 +684,7 @@
         let html = '<td class="time-cell">' + row.time + '</td><td class="user-cell" style="color: ' + row.color + '">' + row.user + '</td>';
         
         for (let i = 0; i < COLUMNS_CONFIG.length; i++) {
-            const val = (row.values && row.values[i] !== undefined) ? row.values[i] : '-';
+            const val = (row.values && row.values.at(i) !== undefined) ? row.values.at(i) : '-';
             html += '<td>' + (val || '-') + '</td>';
         }
         
