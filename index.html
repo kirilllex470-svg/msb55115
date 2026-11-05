@@ -5,6 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="theme-color" content="#0f172a">
     <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="МСБ55115">
+    <link rel="manifest" href="/manifest.json">
+    <link rel="icon" type="image/svg+xml" href="/icon.svg">
+    <link rel="apple-touch-icon" href="/icon.svg">
     <title>МСБ55115</title>
     <style>
         :root { --bg: #0f172a; --panel: #1e293b; --accent: #3b82f6; --text: #f1f5f9; --border: #334155; --danger: #ef4444; }
@@ -16,6 +22,7 @@
         .login-box button:hover { background: #2563eb; }
         .viewer-btn { background: transparent !important; border: 1px solid #475569 !important; color: #94a3b8 !important; margin-top: 15px; }
         .viewer-btn:hover { background: #1e293b !important; color: white !important; }
+        .install-btn { display: none; background: #10b981 !important; color: white !important; border: none !important; margin-top: 15px; padding: 12px 15px; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 14px; }
         .error-msg { color: var(--danger); font-size: 14px; margin-top: 10px; display: none; }
         .input-panel { background: var(--panel); padding: 25px; border-radius: 12px; border: 1px solid var(--border); width: 100%; max-width: 1200px; margin-bottom: 30px; display: none; box-sizing: border-box; }
         .inputs-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 15px; margin-bottom: 20px; }
@@ -71,13 +78,17 @@
             <input type="password" id="login-pass" placeholder="••••">
             <button onclick="attemptLogin()">ВОЙТИ</button>
             <button class="viewer-btn" onclick="loginAsViewer()">Просто смотреть</button>
+            <button class="install-btn pwa-install-btn" onclick="installPWA()">📲 УСТАНОВИТЬ ПРИЛОЖЕНИЕ</button>
             <div id="login-error" class="error-msg">❌ Неверный пароль</div>
         </div>
     </div>
     <div class="input-panel" id="input-panel">
         <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:15px;">
             <h3 style="margin:0;">📝 ПОДРАЗДЕЛЕНИЕ: <span id="my-name"></span></h3>
-            <button onclick="logoutUser()" style="background:#334155; color:white; border:none; padding:8px 15px; border-radius:6px; cursor:pointer; font-weight:bold;">Выход</button>
+            <div style="display:flex; gap:10px;">
+                <button class="install-btn pwa-install-btn" style="margin-top:0; padding:8px 15px;" onclick="installPWA()">📲 Установить</button>
+                <button onclick="logoutUser()" style="background:#334155; color:white; border:none; padding:8px 15px; border-radius:6px; cursor:pointer; font-weight:bold;">Выход</button>
+            </div>
         </div>
         <div class="inputs-grid" id="dynamic-inputs"></div>
         <button class="send-btn" onclick="submitRow()">📤 ЗАПИСАТЬ В ЖУРНАЛ</button>
@@ -166,6 +177,32 @@
     let keepAliveAudio = null;
     let sirenAudio = null;
     let publicVapidKey = null;
+    let deferredPrompt = null;
+
+    window.addEventListener('beforeinstallprompt', function(e) {
+        e.preventDefault();
+        deferredPrompt = e;
+        document.querySelectorAll('.pwa-install-btn').forEach(function(btn) {
+            btn.style.display = 'inline-block';
+        });
+    });
+
+    window.addEventListener('appinstalled', function() {
+        deferredPrompt = null;
+        document.querySelectorAll('.pwa-install-btn').forEach(function(btn) {
+            btn.style.display = 'none';
+        });
+    });
+
+    async function installPWA() {
+        if (!deferredPrompt) return;
+        deferredPrompt.prompt();
+        await deferredPrompt.userChoice;
+        deferredPrompt = null;
+        document.querySelectorAll('.pwa-install-btn').forEach(function(btn) {
+            btn.style.display = 'none';
+        });
+    }
 
     function urlBase64ToUint8Array(base64String) {
         const padding = '='.repeat((4 - base64String.length % 4) % 4);
@@ -183,7 +220,7 @@
             const permission = await Notification.requestPermission();
             if (permission !== 'granted') return;
 
-            const reg = await navigator.serviceWorker.register('/sw.js?v=6');
+            const reg = await navigator.serviceWorker.register('/sw.js?v=7');
             await reg.update();
             const readyReg = await navigator.serviceWorker.ready;
 
@@ -336,7 +373,6 @@
 
         ws.onclose = function() { setTimeout(connectWS, 1500); };
     }
-
     setInterval(function() {
         if (ws && ws.readyState === WebSocket.OPEN) {
             ws.send(JSON.stringify({ type: 'ping' }));
@@ -381,7 +417,7 @@
 
     function initApp() {
         if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('/sw.js?v=6').catch(function() {});
+            navigator.serviceWorker.register('/sw.js?v=7').catch(function() {});
         }
 
         document.body.addEventListener('click', function firstTouch() {
@@ -458,7 +494,6 @@
             document.getElementById('login-error').style.display = 'block';
         }
     }
-
     function logoutUser() {
         localStorage.removeItem('journal_user');
         localStorage.removeItem('journal_color');
