@@ -3,7 +3,6 @@ const fs = require('fs');
 const WebSocket = require('ws');
 const webpush = require('web-push');
 
-// Если запущено на облачном сервере (есть папка /data), сохраняем файлы туда, чтобы они хранились вечно
 const DATA_DIR = fs.existsSync('/data') ? '/data/' : '';
 const DB_FILE = DATA_DIR + 'history.json';
 const SUBS_FILE = DATA_DIR + 'subscriptions.json';
@@ -36,7 +35,7 @@ const SW_CODE = [
     "self.addEventListener('install', function(e) { self.skipWaiting(); });",
     "self.addEventListener('activate', function(e) { e.waitUntil(clients.claim()); });",
     "self.addEventListener('push', function(event) {",
-    "    var data = { title: '🛑 СООБЩЕНИЕ АДМИНИСТРАТОРА!', body: 'Срочно откройте журнал!' };",
+    "    var data = { title: '🛑 СООБЩЕНИЕ В ЖУРНАЛЕ!', body: 'Срочно откройте журнал!' };",
     "    if (event.data) { try { data = event.data.json(); } catch (e) {} }",
     "    event.waitUntil(self.registration.showNotification(data.title, {",
     "        body: data.body,",
@@ -91,7 +90,6 @@ const server = http.createServer(function(req, res) {
         });
     }
 });
-
 const wss = new WebSocket.Server({ server: server });
 
 let tableHistory = new Array(); 
@@ -166,18 +164,49 @@ wss.on('connection', function(ws) {
             }
 
             if (msg.type === 'admin_alert') {
-                console.log('📢 АДМИН пишет для ' + msg.target + ': ' + msg.text);
-                activeAlerts[msg.target] = msg.text;
+                const sender = msg.sender || 'АДМИН';
+                const color = msg.color || '#ef4444';
+                const now = new Date();
+                const timeStr = msg.time || (now.toLocaleDateString() + ' ' + now.toLocaleTimeString().slice(0, 5));
+
+                console.log('📢 [' + sender + '] пишет для [' + msg.target + ']: ' + msg.text);
+                activeAlerts[msg.target] = {
+                    text: msg.text,
+                    sender: sender
+                };
+
+                const alertRow = {
+                    id: Date.now(),
+                    time: timeStr,
+                    user: sender,
+                    color: color,
+                    values: [
+                        "📢 УВЕДОМЛЕНИЕ",
+                        "КОМУ: " + msg.target,
+                        "-",
+                        "-",
+                        "-",
+                        "Текст: " + msg.text
+                    ]
+                };
+                tableHistory.push(alertRow);
+                fs.writeFile(DB_FILE, JSON.stringify(tableHistory), function() {});
 
                 wss.clients.forEach(function(client) {
                     if (client.readyState === WebSocket.OPEN) {
-                        client.send(JSON.stringify(msg));
+                        client.send(JSON.stringify({ type: 'new_row', row: alertRow }));
+                        client.send(JSON.stringify({
+                            type: 'admin_alert',
+                            sender: sender,
+                            target: msg.target,
+                            text: msg.text
+                        }));
                     }
                 });
 
                 const payload = JSON.stringify({
-                    title: '🛑 ТРЕВОГА ДЛЯ [' + msg.target + ']!',
-                    body: 'АДМИН: ' + msg.text
+                    title: '🛑 СООБЩЕНИЕ ДЛЯ [' + msg.target + ']!',
+                    body: sender + ': ' + msg.text
                 });
 
                 const pushOptions = {
@@ -189,9 +218,9 @@ wss.on('connection', function(ws) {
 
                 console.log('📲 Отправка в шторку для телефонов (' + pushSubscriptions.length + ' шт.)...');
                 pushSubscriptions.forEach(function(item, index) {
-                    if (msg.target === 'ВСЕМ' || !item.user || item.user === msg.target) {
+                    if (msg.target === 'ВСЕМ' || !item.user || item.user === 'ГОСТЬ' || item.user === msg.target) {
                         webpush.sendNotification(item.sub, payload, pushOptions)
-                            .then(function() { console.log('---> Успешно доставлено в шторку (' + item.user + ')'); })
+                            .then(function() { console.log('---> Успешно доставлено в шторку (' + (item.user || 'Гость') + ')'); })
                             .catch(function(err) {
                                 console.log('---> Ошибка доставки Push:', err.statusCode);
                                 if (err.statusCode === 410 || err.statusCode === 404) {
@@ -216,7 +245,6 @@ wss.on('connection', function(ws) {
     });
 });
 
-// Автоматический выбор порта для облачного сервера или локального запуска
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, '0.0.0.0', function() {
     console.log('🚀 СЕРВЕР ЗАПУЩЕН И РАБОТАЕТ! (Порт ' + PORT + ')');
