@@ -1,5 +1,6 @@
 const http = require('http');
 const fs = require('fs');
+const zlib = require('zlib');
 const WebSocket = require('ws');
 const webpush = require('web-push');
 
@@ -31,6 +32,60 @@ if (fs.existsSync(SUBS_FILE)) {
     }
 }
 
+function createSolidPng(size) {
+    const crcTable = new Uint32Array(256);
+    for (let n = 0; n < 256; n++) {
+        let c = n;
+        for (let k = 0; k < 8; k++) c = (c & 1) ? (0xedb88320 ^ (c >>> 1)) : (c >>> 1);
+        crcTable[n] = c;
+    }
+    function crc32(buf) {
+        let c = -1;
+        for (let i = 0; i < buf.length; i++) {
+            c = (c >>> 8) ^ crcTable[(c ^ buf[i]) & 0xff];
+        }
+        return (c ^ -1) >>> 0;
+    }
+    function chunk(type, data) {
+        const len = Buffer.alloc(4);
+        len.writeUInt32BE(data.length, 0);
+        const typeBuf = Buffer.from(type);
+        const crcBuf = Buffer.alloc(4);
+        crcBuf.writeUInt32BE(crc32(Buffer.concat([typeBuf, data])), 0);
+        return Buffer.concat([len, typeBuf, data, crcBuf]);
+    }
+    const ihdr = Buffer.alloc(13);
+    ihdr.writeUInt32BE(size, 0);
+    ihdr.writeUInt32BE(size, 4);
+    ihdr.writeUInt8(8, 8);
+    ihdr.writeUInt8(2, 9);
+    const rowLen = size * 3 + 1;
+    const raw = Buffer.alloc(rowLen * size);
+    const border = Math.floor(size * 0.12);
+    for (let y = 0; y < size; y++) {
+        const rowOff = y * rowLen;
+        raw[rowOff] = 0;
+        for (let x = 0; x < size; x++) {
+            const p = rowOff + 1 + x * 3;
+            const isBorder = (x < border || x >= size - border || y < border || y >= size - border);
+            raw[p]     = isBorder ? 59  : 30;
+            raw[p + 1] = isBorder ? 130 : 41;
+            raw[p + 2] = isBorder ? 246 : 59;
+        }
+    }
+    const idat = zlib.deflateSync(raw);
+    const signature = Buffer.from('89504e470d0a1a0a', 'hex');
+    return Buffer.concat([
+        signature,
+        chunk('IHDR', ihdr),
+        chunk('IDAT', idat),
+        chunk('IEND', Buffer.alloc(0))
+    ]);
+}
+
+const PNG_192 = createSolidPng(192);
+const PNG_512 = createSolidPng(512);
+
 const MANIFEST_JSON = JSON.stringify({
     id: "/",
     name: "Журнал событий МСБ55115",
@@ -44,41 +99,39 @@ const MANIFEST_JSON = JSON.stringify({
     theme_color: "#0f172a",
     icons: [
         {
-            src: "https://flaticon.com",
+            src: "/icon-192.png",
             sizes: "192x192",
             type: "image/png",
             purpose: "any"
         },
         {
-            src: "https://flaticon.com",
+            src: "/icon-512.png",
             sizes: "512x512",
             type: "image/png",
-            purpose: "any maskable"
+            purpose: "any"
         },
         {
-            src: "/icon.svg",
+            src: "/icon-512.png",
             sizes: "512x512",
-            type: "image/svg+xml",
-            purpose: "any"
+            type: "image/png",
+            purpose: "maskable"
         }
     ]
 });
-
-const ICON_SVG = '<svg xmlns="http://w3.org" viewBox="0 0 512 512"><rect width="512" height="512" rx="100" fill="#0f172a"/><rect x="40" y="40" width="432" height="432" rx="80" fill="#1e293b" stroke="#3b82f6" stroke-width="16"/><text x="256" y="240" font-family="monospace, sans-serif" font-size="110" font-weight="bold" fill="#f1f5f9" text-anchor="middle">МСБ</text><text x="256" y="360" font-family="monospace, sans-serif" font-size="95" font-weight="bold" fill="#3b82f6" text-anchor="middle">55115</text></svg>';
 
 const SW_CODE = [
     "self.addEventListener('install', function(e) { self.skipWaiting(); });",
     "self.addEventListener('activate', function(e) { e.waitUntil(clients.claim()); });",
     "self.addEventListener('fetch', function(event) {",
     "    if (event.request.method !== 'GET') return;",
-    "    event.respondWith(fetch(event.request).catch(function() { return caches.match(event.request); }));",
+    "    event.respondWith(fetch(event.request));",
     "});",
     "self.addEventListener('push', function(event) {",
     "    var data = { title: '🛑 СООБЩЕНИЕ В ЖУРНАЛЕ!', body: 'Срочно откройте журнал!' };",
     "    if (event.data) { try { data = event.data.json(); } catch (e) {} }",
     "    event.waitUntil(self.registration.showNotification(data.title, {",
     "        body: data.body,",
-    "        icon: '/icon.svg',",
+    "        icon: '/icon-192.png',",
     "        vibrate: Array.of(800, 200, 800, 200, 800, 200, 1000),",
     "        silent: false,",
     "        requireInteraction: true,",
@@ -90,7 +143,7 @@ const SW_CODE = [
     "    if (event.data && event.data.type === 'SHOW_NOTIFICATION') {",
     "        self.registration.showNotification(event.data.title, {",
     "            body: event.data.body,",
-    "            icon: '/icon.svg',",
+    "            icon: '/icon-192.png',",
     "            vibrate: Array.of(800, 200, 800, 200, 800, 200, 1000),",
     "            silent: false,",
     "            requireInteraction: true,",
@@ -111,25 +164,38 @@ const SW_CODE = [
 ].join('\n');
 
 const server = http.createServer(function(req, res) {
-    if (req.url && req.url.indexOf('/sw.js') === 0) {
+    const rawUrl = req.url || '/';
+    const qIndex = rawUrl.indexOf('?');
+    const cleanUrl = qIndex !== -1 ? rawUrl.substring(0, qIndex) : rawUrl;
+
+    if (cleanUrl === '/sw.js') {
         res.writeHead(200, { 
             'Content-Type': 'application/javascript; charset=utf-8',
+            'Service-Worker-Allowed': '/',
             'Cache-Control': 'no-cache, no-store, must-revalidate'
         });
         res.end(SW_CODE);
         return;
     }
-    if (req.url && req.url.indexOf('/manifest.json') === 0) {
-        res.writeHead(200, { 'Content-Type': 'application/manifest+json; charset=utf-8' });
+    if (cleanUrl === '/manifest.json') {
+        res.writeHead(200, { 
+            'Content-Type': 'application/manifest+json; charset=utf-8',
+            'Cache-Control': 'no-cache'
+        });
         res.end(MANIFEST_JSON);
         return;
     }
-    if (req.url && req.url.indexOf('/icon.svg') === 0) {
-        res.writeHead(200, { 'Content-Type': 'image/svg+xml; charset=utf-8' });
-        res.end(ICON_SVG);
+    if (cleanUrl === '/icon-192.png' || cleanUrl === '/favicon.ico') {
+        res.writeHead(200, { 'Content-Type': 'image/png' });
+        res.end(PNG_192);
         return;
     }
-    if (req.url === '/' || req.url.indexOf('/?') === 0) {
+    if (cleanUrl === '/icon-512.png') {
+        res.writeHead(200, { 'Content-Type': 'image/png' });
+        res.end(PNG_512);
+        return;
+    }
+    if (cleanUrl === '/' || cleanUrl === '/index.html') {
         fs.readFile('index.html', function(err, data) {
             if (err) { 
                 res.writeHead(500); 
@@ -139,7 +205,10 @@ const server = http.createServer(function(req, res) {
                 res.end(data); 
             }
         });
+        return;
     }
+    res.writeHead(404);
+    res.end('Not found');
 });
 const wss = new WebSocket.Server({ server: server });
 
@@ -213,6 +282,7 @@ wss.on('connection', function(ws) {
                     }
                 });
             }
+
             if (msg.type === 'admin_alert') {
                 const sender = msg.sender || 'АДМИН';
                 const color = msg.color || '#ef4444';
