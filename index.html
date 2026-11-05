@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#0f172a">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <title>Журнал Работ</title>
+    <style>
+        :root { --bg: #0f172a; --panel: #1e293b; --accent: #3b82f6; --text: #f1f5f9; --border: #334155; --danger: #ef4444; }
+        body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', monospace; margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; box-sizing: border-box; }
+
+        /* ВХОД */
+        #login-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.98); z-index: 100; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 15px; box-sizing: border-box; }
+        .login-box { background: var(--panel); padding: 40px; border-radius: 16px; border: 1px solid var(--border); width: 100%; max-width: 320px; text-align: center; box-shadow: 0 20px 60px rgba(0,0,0,0.7); box-sizing: border-box; }
+        .login-box select, .login-box input { width: 100%; padding: 14px; margin-bottom: 20px; background: #0f172a; border: 1px solid var(--border); color: white; border-radius: 8px; font-size: 16px; outline: none; box-sizing: border-box; }
+        .login-box button { width: 100%; padding: 14px; background: var(--accent); color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; transition: 0.2s; }
+        .login-box button:hover { background: #2563eb; }
+        .viewer-btn { background: transparent !important; border: 1px solid #475569 !important; color: #94a3b8 !important; margin-top: 15px; }
+        .viewer-btn:hover { background: #1e293b !important; color: white !important; }
+        .error-msg { color: var(--danger); font-size: 14px; margin-top: 10px; display: none; }
+
+        /* ПАНЕЛЬ ВВОДА */
+        .input-panel { background: var(--panel); padding: 25px; border-radius: 12px; border: 1px solid var(--border); width: 100%; max-width: 1200px; margin-bottom: 30px; display: none; box-sizing: border-box; }
+        .inputs-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 15px; margin-bottom: 20px; }
+        .field-group label { display: block; font-size: 13px; color: #94a3b8; margin-bottom: 5px; font-weight: bold; }
+        .field-group select, .field-group input { width: 100%; padding: 12px; background: #0f172a; border: 1px solid var(--border); color: white; border-radius: 6px; font-size: 16px; outline: none; box-sizing: border-box; }
+        .send-btn { width: 100%; padding: 15px; background: #22c55e; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; }
+
+        /* АДМИНКА */
+        #admin-zone { display: none; margin-top: 30px; padding: 20px; border: 2px solid var(--danger); border-radius: 10px; background: rgba(239, 68, 68, 0.1); }
+        .admin-controls { display: flex; gap: 10px; }
+        .admin-controls select { width: 200px; padding: 12px; border-radius: 6px; border: none; font-size: 16px; }
+        .admin-controls input { flex-grow: 1; padding: 12px; border-radius: 6px; border: none; font-size: 16px; }
+        .admin-controls button { padding: 12px 20px; background: var(--danger); color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; }
+
+        /* ОКНО ТРЕВОГИ */
+        #alert-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(185, 28, 28, 0.98); z-index: 99999; flex-direction: column; justify-content: center; align-items: center; text-align: center; padding: 15px; box-sizing: border-box; }
+        .alert-content { background: white; color: #b91c1c; padding: 30px; border-radius: 20px; width: 100%; max-width: 600px; box-shadow: 0 0 50px rgba(0,0,0,0.5); animation: shake 0.5s infinite; box-sizing: border-box; }
+        @keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-5px); } 75% { transform: translateX(5px); } }
+        .alert-btn { margin-top: 20px; width: 100%; padding: 18px; font-size: 20px; background: #b91c1c; color: white; border: none; border-radius: 10px; cursor: pointer; font-weight: bold; }
+
+        /* ТАБЛИЦА */
+        .history-container { width: 100%; max-width: 1400px; overflow-x: auto; -webkit-overflow-scrolling: touch; border-radius: 8px; }
+        table { width: 100%; border-collapse: collapse; min-width: 850px; }
+        th, td { border: 1px solid var(--border); padding: 10px; text-align: center; font-size: 14px; }
+        th { background: #1e293b; color: #94a3b8; }
+        .new-row { animation: fadeIn 0.5s ease; }
+        .time-cell { color: #facc15; font-family: monospace; }
+        .user-cell { font-weight: bold; }
+        .ack-row td { background: rgba(34, 197, 94, 0.1); color: #86efac; font-style: italic; }
+
+        /* АДАПТАЦИЯ ПОД ТЕЛЕФОН */
+        @media (max-width: 768px) {
+            body { padding: 10px; }
+            .login-box { padding: 25px 20px; }
+            .input-panel { padding: 15px; margin-bottom: 20px; }
+            .inputs-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+            .admin-controls { flex-direction: column; }
+            .admin-controls select, .admin-controls input, .admin-controls button { width: 100%; box-sizing: border-box; }
+            .alert-content h1 { font-size: 28px !important; }
+            #alert-text { font-size: 22px !important; padding: 15px !important; word-break: break-word; }
+        }
+        @media (max-width: 480px) {
+            .inputs-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- ОКНО СООБЩЕНИЯ (АДМИН) -->
+    <div id="alert-modal">
+        <div class="alert-content">
+            <h1 style="font-size: 40px; margin: 0;">🛑 СООБЩЕНИЕ!</h1>
+            <p id="alert-target-label" style="font-size: 18px; margin-top: 10px; font-weight: bold;">АДМИНИСТРАТОР ПИШЕТ:</p>
+            <h2 id="alert-text" style="font-size: 32px; border-top: 2px solid #b91c1c; border-bottom: 2px solid #b91c1c; padding: 20px;">...</h2>
+            <button class="alert-btn" onclick="confirmAlert()">ДА, Я ПОНЯЛ</button>
+        </div>
+    </div>
+
+    <!-- ВХОД -->
+    <div id="login-overlay">
+        <div class="login-box">
+            <h2 style="color:white; margin-top:0;">🔐 Доступ</h2>
+            <div style="text-align: left; color: #94a3b8; font-size: 13px; margin-bottom: 5px;">Сотрудник:</div>
+            <select id="login-select"></select>
+            <div style="text-align: left; color: #94a3b8; font-size: 13px; margin-bottom: 5px;">Пароль:</div>
+            <input type="password" id="login-pass" placeholder="••••">
+            <button onclick="attemptLogin()">ВОЙТИ</button>
+            <button class="viewer-btn" onclick="loginAsViewer()">Просто смотреть</button>
+            <div id="login-error" class="error-msg">❌ Неверный пароль</div>
+        </div>
+    </div>
+
+    <!-- ИНТЕРФЕЙС -->
+    <div class="input-panel" id="input-panel">
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:15px;">
+            <h3 style="margin:0;">📝 ПОДРАЗДЕЛЕНИЕ: <span id="my-name"></span></h3>
+            <button onclick="logoutUser()" style="background:#334155; color:white; border:none; padding:8px 15px; border-radius:6px; cursor:pointer; font-weight:bold;">Выход</button>
+        </div>
+
+        <div class="inputs-grid" id="dynamic-inputs"></div>
+        <button class="send-btn" onclick="submitRow()">📤 ЗАПИСАТЬ В ЖУРНАЛ</button>
+
+        <div id="admin-zone">
+            <h3 style="color: #ef4444; margin-top: 0;">⚡ УПРАВЛЕНИЕ</h3>
+            <div style="color: #fca5a5; margin-bottom: 10px; font-size: 14px;">Отправить уведомление:</div>
+            <div class="admin-controls">
+                <select id="admin-target"></select>
+                <input type="text" id="admin-msg" placeholder="Напишите замечание...">
+                <button onclick="sendAdminAlert()">ОТПРАВИТЬ</button>
+            </div>
+            <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid rgba(239, 68, 68, 0.3);">
+                <button onclick="clearHistoryAdmin()" style="width: 100%; padding: 12px; background: #7f1d1d; color: #fecaca; border: 1px solid #ef4444; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 15px;">🗑️ ОЧИСТИТЬ ЖУРНАЛ СОБЫТИЙ ПОЛНОСТЬЮ</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ТАБЛИЦА -->
+    <h3 style="color:#94a3b8; width: 100%; max-width: 1400px; margin: 10px 0;">📊 Журнал событий</h3>
+    <div class="history-container">
+        <table>
+            <thead>
+                <tr id="table-headers">
+                    <th style="width: 130px;">🕒 Время</th>
+                    <th style="width: 110px;">👤 Кто</th>
+                </tr>
+            </thead>
+            <tbody id="table-body"></tbody>
+        </table>
+    </div>
+<script>
+    const USERS_CONFIG = [
+        { name: "ШР", pass: "1111", color: "#3b82f6" },
+        { name: "РОТА-1", pass: "2222", color: "#a855f7" },
+        { name: "РОТА-2", pass: "3333", color: "#22c55e" },
+        { name: "РОТА-3", pass: "4444", color: "#eab308" },
+        { name: "АДМИН", pass: "5555", color: "#ef4444" }
+    ];
+    const ADMIN_NAME = "АДМИН";
+
+    const COLUMNS_CONFIG = [
+        { label: "ГРУППА",       options: ["1", "2", "3", "4", "5"] },
+        { label: "ИСХОДНИКИ",    options: ["НАЧАЛИ ДВИЖЕНИЕ", "Цех 2", "Склад"] },
+        { label: "ЦВЕТ ТОЧКИ",   options: ["ФИОЛЕТОВЫЙ", "Сборка", "Покраска"] },
+        { label: "НОМЕР ТОЧКИ",  options: new Array() },
+        { label: "ЛЕСОПОЛОСА",   options: ["Легко", "Норма", "Сложно"] },
+        { label: "Примечание",   options: new Array() }
+    ];
+
+    let ws = null;
+    let currentUser = null;
+    let userColor = '#fff';
+    let currentAlertText = "";
+    let currentAlertTarget = "";
+    let pendingAlerts = {};
+    let titleInterval = null;
+    let soundInterval = null;
+    let audioCtx = null;
+    let keepAliveAudio = null;
+    let sirenAudio = null;
+    let publicVapidKey = null;
+
+    function urlBase64ToUint8Array(base64String) {
+        const padding = '='.repeat((4 - base64String.length % 4) % 4);
+        const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+        const rawData = window.atob(base64);
+        const outputArray = new Uint8Array(rawData.length);
+        for (let i = 0; i < rawData.length; ++i) outputArray[i] = rawData.charCodeAt(i);
+        return outputArray;
+    }
+
+    async function subscribeToWebPush() {
+        if (!('Notification' in window) || !('serviceWorker' in navigator)) return;
+        try {
+            if (Notification.permission === 'denied') {
+                alert("⚠️ Уведомления заблокированы в браузере! Нажмите на значок настроек слева от адресной строки сайта -> Разрешения -> Уведомления -> Разрешить.");
+                return;
+            }
+            const permission = await Notification.requestPermission();
+            if (permission !== 'granted') return;
+
+            const reg = await navigator.serviceWorker.register('/sw.js?v=5');
+            await reg.update();
+            const readyReg = await navigator.serviceWorker.ready;
+
+            if ('PushManager' in window && publicVapidKey) {
+                let sub = await readyReg.pushManager.getSubscription();
+                if (!sub) {
+                    sub = await readyReg.pushManager.subscribe({
+                        userVisibleOnly: true,
+                        applicationServerKey: urlBase64ToUint8Array(publicVapidKey)
+                    });
+                }
+                if (ws && ws.readyState === WebSocket.OPEN) {
+                    ws.send(JSON.stringify({ type: 'save_sub', user: currentUser, sub: sub }));
+                }
+            }
+        } catch (e) { console.error('Push error:', e); }
+    }
+
+    function sendLocalNotification(target, text) {
+        const title = '🛑 ТРЕВОГА ДЛЯ [' + target + ']!';
+        const body = 'АДМИН: ' + text;
+
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.ready.then(function(reg) {
+                reg.showNotification(title, {
+                    body: body,
+                    vibrate: Array.of(800, 200, 800, 200, 800, 200, 1000),
+                    silent: false,
+                    requireInteraction: true,
+                    renotify: true,
+                    tag: 'admin-alert'
+                }).catch(function() {});
+            });
+        }
+    }
+
+    function createWavUrl(freq, durationSec, volume) {
+        const sr = 8000;
+        const numSamples = sr * durationSec;
+        const buf = new ArrayBuffer(44 + numSamples * 2);
+        const view = new DataView(buf);
+        const writeStr = function(off, s) { for (let i = 0; i < s.length; i++) view.setUint8(off + i, s.charCodeAt(i)); };
+        writeStr(0, 'RIFF'); view.setUint32(4, 36 + numSamples * 2, true); writeStr(8, 'WAVE');
+        writeStr(12, 'fmt '); view.setUint32(16, 16, true); view.setUint16(20, 1, true);
+        view.setUint16(22, 1, true); view.setUint32(24, sr, true); view.setUint32(28, sr * 2, true);
+        view.setUint16(32, 2, true); view.setUint16(34, 16, true); writeStr(36, 'data');
+        view.setUint32(40, numSamples * 2, true);
+        for (let i = 0; i < numSamples; i++) {
+            let sample = 0;
+            if (volume > 0) {
+                const f = (i % sr < sr / 2) ? freq : freq * 1.3;
+                sample = Math.sin(2 * Math.PI * f * (i / sr)) * volume * 32767;
+            }
+            view.setInt16(44 + i * 2, sample, true);
+        }
+        return URL.createObjectURL(new Blob([buf], { type: 'audio/wav' }));
+    }
+
+    function unlockMobileFeatures() {
+        try {
+            if (!keepAliveAudio) {
+                keepAliveAudio = new Audio(createWavUrl(100, 1, 0.0001));
+                keepAliveAudio.loop = true;
+            }
+            keepAliveAudio.play().catch(function() {});
+
+            if (!sirenAudio) {
+                sirenAudio = new Audio(createWavUrl(880, 1, 0.9));
+                sirenAudio.loop = true;
+            }
+
+            if ('mediaSession' in navigator) {
+                navigator.mediaSession.metadata = new MediaMetadata({
+                    title: '🟢 Дежурный режим активен',
+                    artist: 'Журнал Работ (Ожидание команд)',
+                    album: 'Нажмите, чтобы открыть'
+                });
+            }
+        } catch(e) {}
+
+        if ('wakeLock' in navigator) {
+            navigator.wakeLock.request('screen').catch(function() {});
+        }
+    }
+
+    function updateLockScreenAlert(target, text) {
+        if ('mediaSession' in navigator) {
+            navigator.mediaSession.metadata = new MediaMetadata({
+                title: '🛑 ТРЕВОГА ДЛЯ [' + target + ']!',
+                artist: text,
+                album: 'СРОЧНО ОТКРОЙТЕ БРАУЗЕР!'
+            });
+        }
+    }
+
+    function playBeep() {
+        try {
+            if (navigator.vibrate) navigator.vibrate(Array.of(600, 200, 600));
+            if (sirenAudio) sirenAudio.play().catch(function() {});
+            
+            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(880, audioCtx.currentTime);
+            gain.gain.setValueAtTime(0.4, audioCtx.currentTime);
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start();
+            setTimeout(function() { osc.stop(); }, 450);
+        } catch(e) {}
+    }
+
+    function connectWS() {
+        if (ws && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING)) return;
+        ws = new WebSocket(location.origin.replace(/^http/, 'ws'));
+
+        ws.onmessage = function(event) {
+            const msg = JSON.parse(event.data);
+            if (msg.type === 'init') {
+                document.getElementById('table-body').innerHTML = '';
+                msg.data.forEach(appendRow);
+                if (msg.vapidPublicKey) {
+                    publicVapidKey = msg.vapidPublicKey;
+                    if (currentUser || Notification.permission === 'granted') {
+                        subscribeToWebPush();
+                    }
+                }
+                if (msg.alerts) {
+                    pendingAlerts = msg.alerts;
+                    checkAndShowAlerts(false);
+                }
+            }
+            if (msg.type === 'new_row') appendRow(msg.row);
+            if (msg.type === 'history_cleared') {
+                document.getElementById('table-body').innerHTML = '';
+            }
+            if (msg.type === 'admin_alert') {
+                pendingAlerts[msg.target] = msg.text;
+                checkAndShowAlerts(true);
+            }
+            if (msg.type === 'alert_cleared') {
+                delete pendingAlerts[msg.target];
+                if (currentAlertTarget === msg.target) stopAlertVisuals();
+                checkAndShowAlerts(false);
+            }
+        };
+
+        ws.onclose = function() { setTimeout(connectWS, 1500); };
+    }
+
+    setInterval(function() {
+        if (ws && ws.readyState === WebSocket.OPEN) {
+            ws.send(JSON.stringify({ type: 'ping' }));
+        } else {
+            connectWS();
+        }
+    }, 4000);
+    function initApp() {
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/sw.js?v=5').catch(function() {});
+        }
+
+        const loginSelect = document.getElementById('login-select');
+        const adminSelect = document.getElementById('admin-target');
+        
+        loginSelect.innerHTML = '';
+        adminSelect.innerHTML = '';
+
+        let optAll = document.createElement('option');
+        optAll.value = "ВСЕМ"; optAll.innerText = "📢 ВСЕМ ПОДРАЗДЕЛЕНИЯМ";
+        adminSelect.appendChild(optAll);
+
+        USERS_CONFIG.forEach(function(u, index) {
+            let opt = document.createElement('option');
+            opt.value = index; opt.innerText = u.name;
+            loginSelect.appendChild(opt);
+
+            if (u.name !== ADMIN_NAME) {
+                let opt2 = document.createElement('option');
+                opt2.value = u.name; opt2.innerText = u.name;
+                adminSelect.appendChild(opt2);
+            }
+        });
+
+        const headerRow = document.getElementById('table-headers');
+        const inputContainer = document.getElementById('dynamic-inputs');
+        
+        headerRow.innerHTML = '<th style="width: 130px;">🕒 Время</th><th style="width: 110px;">👤 Кто</th>';
+        inputContainer.innerHTML = '';
+
+        COLUMNS_CONFIG.forEach(function(col, index) {
+            let th = document.createElement('th'); 
+            th.innerText = col.label; 
+            headerRow.appendChild(th);
+            
+            let div = document.createElement('div'); 
+            div.className = 'field-group';
+            let inputHtml = '';
+
+            if (col.options && col.options.length > 0) {
+                let opts = col.options.map(function(o) { return '<option>' + o + '</option>'; }).join('');
+                inputHtml = '<select id="in-' + index + '"><option value="" disabled selected>-</option>' + opts + '</select>';
+            } else {
+                inputHtml = '<input type="text" id="in-' + index + '" placeholder="...">';
+            }
+            div.innerHTML = '<label>' + col.label + '</label>' + inputHtml;
+            inputContainer.appendChild(div);
+        });
+
+        const savedUser = localStorage.getItem('journal_user');
+        const savedColor = localStorage.getItem('journal_color');
+        if (savedUser) {
+            currentUser = savedUser;
+            userColor = savedColor || '#fff';
+            document.getElementById('login-overlay').style.display = 'none';
+            document.getElementById('input-panel').style.display = 'block';
+            document.getElementById('my-name').innerText = currentUser;
+            document.getElementById('my-name').style.color = userColor;
+            if (currentUser === ADMIN_NAME) document.getElementById('admin-zone').style.display = 'block';
+        }
+
+        connectWS();
+    }
+    
+    window.onload = initApp;
+
+    function attemptLogin() {
+        unlockMobileFeatures();
+        const userIndex = document.getElementById('login-select').value;
+        const pass = document.getElementById('login-pass').value;
+        const user = USERS_CONFIG[userIndex];
+
+        if (user && pass === user.pass) {
+            currentUser = user.name;
+            userColor = user.color;
+            localStorage.setItem('journal_user', currentUser);
+            localStorage.setItem('journal_color', userColor);
+
+            document.getElementById('login-overlay').style.display = 'none';
+            document.getElementById('input-panel').style.display = 'block';
+            document.getElementById('my-name').innerText = currentUser;
+            document.getElementById('my-name').style.color = userColor;
+            
+            if (currentUser === ADMIN_NAME) document.getElementById('admin-zone').style.display = 'block';
+            subscribeToWebPush();
+            checkAndShowAlerts(false);
+        } else {
+            document.getElementById('login-error').style.display = 'block';
+        }
+    }
+
+    function logoutUser() {
+        localStorage.removeItem('journal_user');
+        localStorage.removeItem('journal_color');
+        location.reload();
+    }
+
+    function loginAsViewer() {
+        unlockMobileFeatures();
+        document.getElementById('login-overlay').style.display = 'none';
+        subscribeToWebPush();
+        checkAndShowAlerts(false);
+    }
+
+    function sendAdminAlert() {
+        const target = document.getElementById('admin-target').value;
+        const msg = document.getElementById('admin-msg').value;
+        if(!msg) return alert("Напишите текст!");
+        ws.send(JSON.stringify({ type: 'admin_alert', target: target, text: msg }));
+        alert("Отправлено!");
+        document.getElementById('admin-msg').value = '';
+    }
+
+    function clearHistoryAdmin() {
+        if (currentUser !== ADMIN_NAME) return;
+        if (confirm("⚠️ Вы уверены, что хотите ПОЛНОСТЬЮ очистить весь журнал событий у всех участников?")) {
+            ws.send(JSON.stringify({ type: 'clear_history' }));
+        }
+    }
+
+    function checkAndShowAlerts(isNew) {
+        if (currentUser === ADMIN_NAME) return;
+
+        let targetToShow = null;
+        if (currentUser) {
+            if (pendingAlerts[currentUser]) targetToShow = currentUser;
+            else if (pendingAlerts["ВСЕМ"]) targetToShow = "ВСЕМ";
+        } else {
+            const targets = Object.keys(pendingAlerts);
+            if (targets.length > 0) targetToShow = targets[0];
+        }
+
+        if (targetToShow) {
+            showAlert(targetToShow, pendingAlerts[targetToShow], isNew);
+        }
+    }
+
+    function showAlert(target, text, isNew) {
+        currentAlertTarget = target;
+        currentAlertText = text;
+        document.getElementById('alert-target-label').innerText = 'ДЛЯ [' + target + '] ОТ АДМИНИСТРАТОРА:';
+        document.getElementById('alert-text').innerText = text;
+        document.getElementById('alert-modal').style.display = 'flex';
+
+        updateLockScreenAlert(target, text);
+        if (isNew || document.visibilityState === 'hidden') {
+            sendLocalNotification(target, text);
+        }
+
+        if (!titleInterval) {
+            let flag = false;
+            titleInterval = setInterval(function() {
+                document.title = flag ? "🛑 ТРЕВОГА! СООБЩЕНИЕ!" : "⚠️ ПРОЧИТАЙТЕ СООБЩЕНИЕ!";
+                flag = !flag;
+            }, 600);
+        }
+        playBeep();
+        if (!soundInterval) {
+            soundInterval = setInterval(playBeep, 2000);
+        }
+    }
+
+    function stopAlertVisuals() {
+        document.getElementById('alert-modal').style.display = 'none';
+        if (titleInterval) { clearInterval(titleInterval); titleInterval = null; }
+        if (soundInterval) { clearInterval(soundInterval); soundInterval = null; }
+        if (sirenAudio) { sirenAudio.pause(); sirenAudio.currentTime = 0; }
+        if (navigator.vibrate) navigator.vibrate(0);
+        document.title = "Журнал Работ";
+        if ('mediaSession' in navigator) {
+            navigator.mediaSession.metadata = new MediaMetadata({
+                title: '🟢 Дежурный режим активен',
+                artist: 'Журнал Работ (Ожидание команд)'
+            });
+        }
+    }
+
+    function confirmAlert() {
+        unlockMobileFeatures();
+        const whoConfirmed = currentUser || ('Экран (' + currentAlertTarget + ')');
+        const confirmColor = currentUser ? userColor : '#facc15';
+
+        stopAlertVisuals();
+        delete pendingAlerts[currentAlertTarget];
+
+        ws.send(JSON.stringify({ type: 'clear_alert', target: currentAlertTarget }));
+
+        const now = new Date();
+        const timeString = now.toLocaleDateString() + ' ' + now.toLocaleTimeString().slice(0, 5);
+        
+        let ackValues = new Array(COLUMNS_CONFIG.length).fill("-");
+        ackValues[0] = "✅ ОЗНАКОМЛЕН";
+        ackValues[ackValues.length - 1] = 'Сообщение: ' + currentAlertText;
+
+        ws.send(JSON.stringify({
+            type: 'add_row',
+            user: whoConfirmed,
+            color: confirmColor,
+            time: timeString,
+            values: ackValues
+        }));
+
+        checkAndShowAlerts(false);
+    }
+
+    function submitRow() {
+        if (!currentUser) return;
+        let values = new Array();
+        let isEmpty = true;
+        for (let i = 0; i < COLUMNS_CONFIG.length; i++) {
+            let val = document.getElementById('in-' + i).value;
+            values.push(val);
+            if(val) isEmpty = false;
+        }
+        if (isEmpty) { alert("Пустая строка!"); return; }
+
+        const now = new Date();
+        ws.send(JSON.stringify({
+            type: 'add_row',
+            user: currentUser,
+            color: userColor,
+            time: now.toLocaleDateString() + ' ' + now.toLocaleTimeString().slice(0, 5),
+            values: values
+        }));
+        
+        for (let i = 0; i < COLUMNS_CONFIG.length; i++) document.getElementById('in-' + i).value = "";
+    }
+
+    function appendRow(row) {
+        const tbody = document.getElementById('table-body');
+        const tr = document.createElement('tr');
+        tr.className = 'new-row';
+        if (row.values && row.values[0] && String(row.values[0]).indexOf("ОЗНАКОМЛЕН") !== -1) {
+            tr.classList.add('ack-row');
+        }
+        let html = '<td class="time-cell">' + row.time + '</td><td class="user-cell" style="color: ' + row.color + '">' + row.user + '</td>';
+        
+        for (let i = 0; i < COLUMNS_CONFIG.length; i++) {
+            const val = (row.values && row.values[i] !== undefined) ? row.values[i] : '-';
+            html += '<td>' + (val || '-') + '</td>';
+        }
+        
+        tr.innerHTML = html;
+        tbody.appendChild(tr);
+        requestAnimationFrame(function() { tr.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); });
+    }
+</script>
+</body>
+</html>

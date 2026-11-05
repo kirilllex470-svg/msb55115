@@ -1,0 +1,12 @@
+{
+  "name": "work-journal",
+  "version": "1.0.0",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "web-push": "^3.6.7",
+    "ws": "^8.18.0"
+  }
+}
