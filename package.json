@@ -1,6 +1,7 @@
 {
-  "name": "work-journal",
+  "name": "msb55115-journal",
   "version": "1.0.0",
+  "description": "Оперативный журнал событий",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
