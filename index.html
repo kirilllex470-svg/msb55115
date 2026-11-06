@@ -1166,6 +1166,25 @@
     window.currentSharedStreamUrl = localStorage.getItem('msb_stream_url') || '';
     window.streamWs = null;
 
+    // Определяем, АДМИН ли сейчас сидит за экраном
+    function isStreamAdmin() {
+        try {
+            for (var i = 0; i < localStorage.length; i++) {
+                var k = localStorage.key(i);
+                var val = String(localStorage.getItem(k) || '').toUpperCase();
+                if (val === 'АДМИН' || val === 'ADMIN') return true;
+            }
+            var selects = document.querySelectorAll('select');
+            for (var j = 0; j < selects.length; j++) {
+                var v = (selects[j].value || '').toUpperCase();
+                if (v.indexOf('АДМИН') !== -1 || v.indexOf('ADMIN') !== -1) return true;
+            }
+            if (typeof currentUser !== 'undefined' && String(currentUser).toUpperCase().indexOf('АДМИН') !== -1) return true;
+            if (typeof currentRole !== 'undefined' && String(currentRole).toUpperCase().indexOf('АДМИН') !== -1) return true;
+        } catch (e) {}
+        return false;
+    }
+
     function initDedicatedStreamWs() {
         try {
             var proto = (window.location.protocol === 'https:') ? 'wss://' : 'ws://';
@@ -1187,19 +1206,29 @@
                         }
 
                         var win = document.getElementById('stream-window');
+                        // Когда Админ нажал "ЗАПУСТИТЬ У ВСЕХ"
                         if (msg.forceOpen && msg.url) {
-                            openStream(msg.url, true);
-                        } else if (msg.url === '' && win) {
-                            openStream('', false);
+                            openStream(msg.url);
+                            // Пытаемся сразу открыть новое окно у пользователя
+                            try {
+                                window.open(msg.url, '_blank');
+                            } catch (e) {}
+                        } else if (!msg.url && win) {
+                            // Когда Админ нажал "СТОП" — закрываем окно у остальных
+                            if (!isStreamAdmin()) {
+                                closeStream();
+                            } else {
+                                openStream('');
+                            }
                         } else if (win && win.style.display !== 'none') {
-                            openStream(msg.url, false);
+                            openStream(msg.url);
                         }
                     }
                 } catch (e) {}
             };
 
             window.streamWs.onclose = function() {
-                setTimeout(initDedicatedStreamWs, 3000);
+                setTimeout(initDedicatedStreamWs, 2000);
             };
         } catch (e) {}
     }
@@ -1211,7 +1240,10 @@
             window.streamWs.send(JSON.stringify(data));
         }
     }
-    function openStream(autoUrl, isForcedByAdmin) {
+    function openStream(autoUrl) {
+        var activeUrl = (autoUrl !== undefined) ? autoUrl : window.currentSharedStreamUrl;
+        var adminMode = isStreamAdmin();
+
         var win = document.getElementById('stream-window');
         if (!win) {
             win = document.createElement('div');
@@ -1221,44 +1253,41 @@
 
         win.style.cssText = 'display: flex !important; position: fixed !important; top: 0 !important; left: 0 !important; width: 100vw !important; height: 100vh !important; background: #0f172a !important; z-index: 999999 !important; color: white !important; flex-direction: column !important; box-sizing: border-box !important;';
 
-        var activeUrl = (autoUrl !== undefined) ? autoUrl : window.currentSharedStreamUrl;
-
         var html = [];
-        html.push('<div style="width: 100%; background: #1e293b; padding: 12px 20px; border-bottom: 2px solid #3b82f6; display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: space-between; box-sizing: border-box; z-index: 10;">');
+        html.push('<div style="width: 100%; background: #1e293b; padding: 14px 20px; border-bottom: 2px solid #3b82f6; display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: space-between; box-sizing: border-box;">');
         html.push('  <div style="font-size: 18px; font-weight: bold; color: #f1f5f9;">📡 Видеострим МСБ55115</div>');
-        html.push('  <div style="display: flex; flex-grow: 1; max-width: 780px; gap: 8px; flex-wrap: wrap;">');
-        html.push('    <input type="text" id="stream-url-input" value="' + activeUrl + '" placeholder="Админ: вставьте ссылку SaluteJazz..." style="flex-grow: 1; min-width: 200px; padding: 10px 14px; border-radius: 8px; border: 2px solid #3b82f6; background: #0f172a; color: #ffffff; font-size: 14px; outline: none; box-sizing: border-box;">');
-        html.push('    <button type="button" onclick="broadcastStreamUrl()" style="padding: 10px 16px; background: #22c55e; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 13px;">📡 ЗАПУСТИТЬ У ВСЕХ</button>');
-        html.push('    <button type="button" onclick="stopBroadcastStream()" style="padding: 10px 12px; background: #f59e0b; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 13px;">⏹ СТОП</button>');
-        html.push('  </div>');
-        html.push('  <button type="button" onclick="closeStream()" style="padding: 10px 16px; background: #ef4444; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 13px;">⬅️ НАЗАД В ЖУРНАЛ</button>');
+
+        // Панель управления показываем ТОЛЬКО АДМИНУ (или если еще никто не запустил стрим, чтобы админ мог ввести ссылку с любого устройства)
+        if (adminMode || !activeUrl) {
+            html.push('  <div style="display: flex; flex-grow: 1; max-width: 750px; gap: 8px; flex-wrap: wrap;">');
+            html.push('    <input type="text" id="stream-url-input" value="' + activeUrl + '" placeholder="Вставьте ссылку SaluteJazz..." style="flex-grow: 1; min-width: 200px; padding: 10px 14px; border-radius: 8px; border: 2px solid #3b82f6; background: #0f172a; color: #ffffff; font-size: 14px; outline: none; box-sizing: border-box;">');
+            html.push('    <button type="button" onclick="broadcastStreamUrl()" style="padding: 10px 18px; background: #22c55e; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 14px;">🚀 ЗАПУСТИТЬ У ВСЕХ</button>');
+            html.push('    <button type="button" onclick="stopBroadcastStream()" style="padding: 10px 16px; background: #ef4444; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 14px;">⏹ СТОП</button>');
+            html.push('  </div>');
+        }
+
+        html.push('  <button type="button" onclick="closeStream()" style="padding: 10px 16px; background: #475569; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 13px;">⬅️ ЗАКРЫТЬ</button>');
         html.push('</div>');
 
-        html.push('<div style="flex-grow: 1; width: 100%; position: relative; background: #0f172a; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 20px; box-sizing: border-box;">');
+        html.push('<div style="flex-grow: 1; width: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 20px; box-sizing: border-box;">');
 
         if (activeUrl) {
-            html.push('  <div style="background: #1e293b; border: 3px solid #22c55e; border-radius: 16px; padding: 35px 25px; text-align: center; max-width: 520px; width: 100%; box-shadow: 0 10px 30px rgba(0,0,0,0.6);">');
-            html.push('    <div style="font-size: 60px; margin-bottom: 15px;">🟢</div>');
-            html.push('    <h2 style="margin: 0 0 10px 0; color: #ffffff; font-size: 24px;">ВИДЕОСТРИМ ЗАПУЩЕН!</h2>');
-            html.push('    <p style="color: #cbd5e1; font-size: 15px; margin-bottom: 25px; line-height: 1.5;">Администратор запустил видеоконференцию.<br>Нажмите большую кнопку ниже, чтобы войти со звуком и видео на весь экран:</p>');
-            html.push('    <button type="button" onclick="openStreamExternal()" style="width: 100%; padding: 18px 24px; background: #22c55e; color: white; border: none; border-radius: 12px; font-weight: bold; cursor: pointer; font-size: 18px; box-shadow: 0 4px 15px rgba(34, 197, 94, 0.4);">🚀 ПОДКЛЮЧИТЬСЯ ВО ВЕСЬ ЭКРАН</button>');
+            html.push('  <div style="background: #1e293b; border: 3px solid #22c55e; border-radius: 16px; padding: 40px 25px; text-align: center; max-width: 500px; width: 100%; box-shadow: 0 10px 30px rgba(0,0,0,0.6);">');
+            html.push('    <div style="font-size: 64px; margin-bottom: 15px;">🟢</div>');
+            html.push('    <h2 style="margin: 0 0 12px 0; color: #ffffff; font-size: 24px;">ИДЕТ ВИДЕОСТРИМ!</h2>');
+            html.push('    <p style="color: #cbd5e1; font-size: 15px; margin-bottom: 25px; line-height: 1.5;">Нажмите кнопку ниже — трансляция сразу откроется в новом окне на весь экран:</p>');
+            html.push('    <a href="' + activeUrl + '" target="_blank" onclick="closeStream()" style="display: block; text-decoration: none; width: 100%; padding: 20px; background: #22c55e; color: white; border-radius: 12px; font-weight: bold; font-size: 20px; box-sizing: border-box; box-shadow: 0 4px 15px rgba(34, 197, 94, 0.4);">🚀 ОТКРЫТЬ В НОВОМ ОКНЕ</a>');
             html.push('  </div>');
         } else {
             html.push('  <div style="text-align: center; padding: 20px; max-width: 500px;">');
             html.push('    <div style="font-size: 55px; margin-bottom: 15px;">🎥</div>');
-            html.push('    <h3 style="margin: 0 0 10px 0; color: #f1f5f9; font-size: 20px;">Трансляция сейчас не активна</h3>');
-            html.push('    <p style="color: #94a3b8; font-size: 14px; line-height: 1.5;">Когда администратор вставит ссылку сверху и нажмёт <b>«📡 ЗАПУСТИТЬ У ВСЕХ»</b>, это окно автоматически откроется у всех сотрудников.</p>');
+            html.push('    <h3 style="margin: 0 0 10px 0; color: #f1f5f9; font-size: 20px;">Трансляция не запущена</h3>');
+            html.push('    <p style="color: #94a3b8; font-size: 14px; line-height: 1.5;">Вставьте ссылку сверху и нажмите <b>«🚀 ЗАПУСТИТЬ У ВСЕХ»</b>.</p>');
             html.push('  </div>');
         }
 
         html.push('</div>');
         win.innerHTML = html.join('');
-
-        if (isForcedByAdmin && activeUrl) {
-            try {
-                window.open(activeUrl, 'SaluteJazzStream', 'width=' + screen.availWidth + ',height=' + screen.availHeight + ',top=0,left=0');
-            } catch (e) {}
-        }
     }
 
     function closeStream() {
@@ -1277,14 +1306,24 @@
         window.currentSharedStreamUrl = url;
         localStorage.setItem('msb_stream_url', url);
 
+        // 1. Рассылаем команду всем открыть окно стрима
         sendStreamWsMessage({
             type: 'set_stream',
             url: url,
             forceOpen: true
         });
 
-        openStream(url, false);
-        openStreamExternal();
+        // 2. Дополнительно шлем Push в шторку телефонов, чтобы услышали даже те, у кого свернут браузер
+        sendStreamWsMessage({
+            type: 'alert',
+            target: 'ВСЕ',
+            sender: 'АДМИН',
+            text: '📡 Запущен Видеострим! Зайдите в журнал для подключения.'
+        });
+
+        openStream(url);
+        // 3. Открываем в новом окне у самого Админа
+        window.open(url, '_blank');
     }
 
     function stopBroadcastStream() {
@@ -1295,17 +1334,11 @@
             url: '',
             forceOpen: false
         });
-        openStream('', false);
-    }
-
-    function openStreamExternal() {
-        var input = document.getElementById('stream-url-input');
-        var url = (input ? input.value.trim() : '') || window.currentSharedStreamUrl;
-        if (!url) return alert("Трансляция еще не запущена!");
-        if (url.indexOf('http://') !== 0 && url.indexOf('https://') !== 0) {
-            url = 'https://' + url;
-        }
-        window.open(url, 'SaluteJazzStream', 'width=' + screen.availWidth + ',height=' + screen.availHeight + ',top=0,left=0');
+        sendStreamWsMessage({
+            type: 'clear_alert',
+            target: 'ВСЕ'
+        });
+        openStream('');
     }
 
     document.addEventListener('click', function(e) {
@@ -1315,6 +1348,7 @@
         }
     });
 </script>
+
 
 </body>
 </html>
