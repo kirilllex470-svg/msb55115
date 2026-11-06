@@ -1,5 +1,4 @@
 const http = require('http');
-const https = require('https');
 const fs = require('fs');
 const path = require('path');
 const WebSocket = require('ws');
@@ -89,7 +88,7 @@ const SW_CODE = [
     "        body: data.body,",
     "        icon: '/icon.svg',",
     "        badge: '/icon.svg',",
-    "        vibrate: [200, 100, 200],",
+    "        vibrate: [800, 200, 800, 200, 800, 200, 1000],",
     "        requireInteraction: true,",
     "        tag: data.tag || 'msb-alert-' + Date.now(),",
     "        renotify: true,",
@@ -111,61 +110,7 @@ const SW_CODE = [
 ].join('\n');
 
 const server = http.createServer(function(req, res) {
-    const parts = req.url.split('?');
-    const urlPath = parts[0];
-    const queryStr = parts[1] || '';
-
-    if (urlPath === '/proxy') {
-        const params = new URLSearchParams(queryStr);
-        const targetUrl = params.get('url');
-        if (!targetUrl) {
-            res.writeHead(400);
-            return res.end('No URL');
-        }
-        try {
-            const parsedUrl = new URL(targetUrl);
-            const options = {
-                hostname: parsedUrl.hostname,
-                path: parsedUrl.pathname + parsedUrl.search,
-                method: 'GET',
-                headers: {
-                    'User-Agent': req.headers['user-agent'] || 'Mozilla/5.0',
-                    'Accept': req.headers['accept'] || '*/*',
-                    'Accept-Language': 'ru-RU,ru;q=0.9'
-                }
-            };
-            https.get(options, function(proxyRes) {
-                const headers = Object.assign({}, proxyRes.headers);
-                delete headers['x-frame-options'];
-                delete headers['content-security-policy'];
-                delete headers['content-security-policy-report-only'];
-                delete headers['x-content-type-options'];
-
-                let body = [];
-                proxyRes.on('data', function(chunk) { body.push(chunk); });
-                proxyRes.on('end', function() {
-                    let buffer = Buffer.concat(body);
-                    const contentType = headers['content-type'] || '';
-                    if (contentType.indexOf('text/html') !== -1) {
-                        let htmlStr = buffer.toString('utf8');
-                        const baseTag = '<base href="' + parsedUrl.origin + '/">';
-                        htmlStr = htmlStr.replace('<head>', '<head>' + baseTag);
-                        buffer = Buffer.from(htmlStr, 'utf8');
-                        headers['content-length'] = buffer.length;
-                    }
-                    res.writeHead(proxyRes.statusCode || 200, headers);
-                    res.end(buffer);
-                });
-            }).on('error', function(e) {
-                res.writeHead(500);
-                res.end('Proxy error: ' + e.message);
-            });
-        } catch (e) {
-            res.writeHead(400);
-            res.end('Bad URL');
-        }
-        return;
-    }
+    const urlPath = req.url.split('?')[0];
 
     if (urlPath === '/manifest.json') {
         res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
