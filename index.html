@@ -988,6 +988,7 @@
     function checkAndShowAlerts(isNew) {
         let targetToShow = null;
 
+        // 1. Проверяем общую тревогу "ВСЕМ" (показываем всем, кроме самого отправителя)
         const allAlert = getAlertObj(pendingAlerts["ВСЕМ"]);
         if (allAlert) {
             if (!currentUser || allAlert.sender !== currentUser) {
@@ -995,15 +996,11 @@
             }
         }
 
-        if (!targetToShow) {
-            if (currentUser) {
-                const myAlert = getAlertObj(pendingAlerts[currentUser]);
-                if (myAlert && myAlert.sender !== currentUser) {
-                    targetToShow = currentUser;
-                }
-            } else {
-                const targets = Object.keys(pendingAlerts);
-                if (targets.length > 0) targetToShow = targets.at(0);
+        // 2. Проверяем личную тревогу СТРОГО для текущего залогиненного подразделения
+        if (!targetToShow && currentUser) {
+            const myAlert = getAlertObj(pendingAlerts[currentUser]);
+            if (myAlert && myAlert.sender !== currentUser) {
+                targetToShow = currentUser;
             }
         }
 
@@ -1012,6 +1009,7 @@
             showAlert(targetToShow, alertObj.text, alertObj.sender, isNew);
         }
     }
+
 
     function showAlert(target, text, sender, isNew) {
         currentAlertTarget = target;
