@@ -1163,161 +1163,227 @@
     }
 </script>
 <script>
-    window.currentSharedStreamUrl = localStorage.getItem('msb_stream_url') || '';
-    window.streamWs = null;
+window.currentSharedStreamUrl = localStorage.getItem('msb_stream_url') || '';
+window.streamWs = null;
 
-    // То самое открытие в отдельном окне приложения (без вкладок и панелей браузера)
-    function openAppPopupWindow(url) {
-        if (!url) return;
-        if (url.indexOf('http://') !== 0 && url.indexOf('https://') !== 0) {
-            url = 'https://' + url;
+function isUserAdmin() {
+    try {
+        if (typeof currentUser !== 'undefined' && String(currentUser).toUpperCase().indexOf('АДМИН') !== -1) return true;
+        if (typeof user !== 'undefined' && String(user).toUpperCase().indexOf('АДМИН') !== -1) return true;
+        if (typeof currentRole !== 'undefined' && String(currentRole).toUpperCase().indexOf('АДМИН') !== -1) return true;
+
+        for (var i = 0; i < localStorage.length; i++) {
+            var k = localStorage.key(i);
+            var val = String(localStorage.getItem(k) || '').toUpperCase();
+            if (val === 'АДМИН' || val === 'ADMIN') return true;
         }
-        window.open(
-            url,
-            'SaluteJazzStream',
-            'width=' + screen.availWidth + ',height=' + screen.availHeight + ',top=0,left=0,toolbar=no,menubar=no,location=no,status=no'
-        );
+
+        var adminPanel = document.getElementById('admin-panel') || document.getElementById('admin-controls');
+        if (adminPanel && adminPanel.style.display !== 'none' && adminPanel.offsetParent !== null) return true;
+    } catch (e) {}
+    return false;
+}
+
+function openAppPopupWindow(url) {
+    if (!url) return;
+    if (url.indexOf('http://') !== 0 && url.indexOf('https://') !== 0) {
+        url = 'https://' + url;
     }
+    window.open(
+        url,
+        'SaluteJazzStream',
+        'width=' + screen.availWidth + ',height=' + screen.availHeight + ',top=0,left=0,toolbar=no,menubar=no,location=no,status=no'
+    );
+}
 
-    function initDedicatedStreamWs() {
-        try {
-            var proto = (window.location.protocol === 'https:') ? 'wss://' : 'ws://';
-            window.streamWs = new WebSocket(proto + window.location.host);
+function initDedicatedStreamWs() {
+    try {
+        var proto = (window.location.protocol === 'https:') ? 'wss://' : 'ws://';
+        window.streamWs = new WebSocket(proto + window.location.host);
 
-            window.streamWs.onopen = function() {
-                window.streamWs.send(JSON.stringify({ type: 'get_stream' }));
-            };
+        window.streamWs.onopen = function() {
+            window.streamWs.send(JSON.stringify({ type: 'get_stream' }));
+        };
 
-            window.streamWs.onmessage = function(event) {
-                try {
-                    var msg = JSON.parse(event.data);
-                    if (msg.type === 'stream_url') {
-                        window.currentSharedStreamUrl = msg.url || '';
-                        if (msg.url) {
-                            localStorage.setItem('msb_stream_url', msg.url);
-                        } else {
-                            localStorage.removeItem('msb_stream_url');
-                        }
-
-                        var win = document.getElementById('stream-window');
-                        if (msg.forceOpen && msg.url) {
-                            openStream(msg.url);
-                            openAppPopupWindow(msg.url);
-                        } else if (!msg.url && win) {
-                            closeStream();
-                        } else if (win && win.style.display !== 'none') {
-                            openStream(msg.url);
-                        }
+        window.streamWs.onmessage = function(event) {
+            try {
+                var msg = JSON.parse(event.data);
+                if (msg.type === 'stream_url') {
+                    window.currentSharedStreamUrl = msg.url || '';
+                    if (msg.url) {
+                        localStorage.setItem('msb_stream_url', msg.url);
+                    } else {
+                        localStorage.removeItem('msb_stream_url');
                     }
-                } catch (e) {}
-            };
 
-            window.streamWs.onclose = function() {
-                setTimeout(initDedicatedStreamWs, 2000);
-            };
-        } catch (e) {}
+                    if (msg.forceOpen && msg.url) {
+                        openAppPopupWindow(msg.url);
+                        if (!isUserAdmin()) {
+                            showUserJoinPrompt(msg.url);
+                        }
+                    } else if (!msg.url) {
+                        closeStream();
+                    }
+                }
+            } catch (e) {}
+        };
+
+        window.streamWs.onclose = function() {
+            setTimeout(initDedicatedStreamWs, 2000);
+        };
+    } catch (e) {}
+}
+
+initDedicatedStreamWs();
+
+function sendStreamWsMessage(data) {
+    if (window.streamWs && window.streamWs.readyState === 1) {
+        window.streamWs.send(JSON.stringify(data));
     }
+}
+function closeStream() {
+    var win = document.getElementById('stream-window');
+    if (win) win.style.display = 'none';
+}
 
-    initDedicatedStreamWs();
-
-    function sendStreamWsMessage(data) {
-        if (window.streamWs && window.streamWs.readyState === 1) {
-            window.streamWs.send(JSON.stringify(data));
-        }
+function showUserJoinPrompt(url) {
+    var win = document.getElementById('stream-window');
+    if (!win) {
+        win = document.createElement('div');
+        win.id = 'stream-window';
+        document.body.appendChild(win);
     }
+    win.innerHTML = '';
+    win.style.cssText = 'display:flex;position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(15,23,42,0.95);z-index:999999;color:white;flex-direction:column;justify-content:center;align-items:center;box-sizing:border-box;';
 
-    function openStream(autoUrl) {
-        var activeUrl = (autoUrl !== undefined) ? autoUrl : window.currentSharedStreamUrl;
+    var box = document.createElement('div');
+    box.style.cssText = 'background:#1e293b;border:3px solid #22c55e;border-radius:16px;padding:35px 25px;text-align:center;max-width:460px;width:90%;';
 
-        var win = document.getElementById('stream-window');
-        if (!win) {
-            win = document.createElement('div');
-            win.id = 'stream-window';
-            document.body.appendChild(win);
-        }
+    var title = document.createElement('h2');
+    title.innerText = '🎥 ВИДЕОСТРИМ ЗАПУЩЕН';
+    title.style.cssText = 'margin:0 0 20px 0;color:#ffffff;';
 
-        win.style.cssText = 'display: flex !important; position: fixed !important; top: 0 !important; left: 0 !important; width: 100vw !important; height: 100vh !important; background: #0f172a !important; z-index: 999999 !important; color: white !important; flex-direction: column !important; box-sizing: border-box !important;';
+    var btnOpen = document.createElement('button');
+    btnOpen.innerText = '🚀 ОТКРЫТЬ СТРИМ';
+    btnOpen.style.cssText = 'width:100%;padding:18px 24px;background:#22c55e;color:white;border:none;border-radius:12px;font-weight:bold;cursor:pointer;font-size:18px;margin-bottom:12px;';
+    btnOpen.onclick = function() {
+        openAppPopupWindow(url);
+        closeStream();
+    };
 
-        var html = [];
-        html.push('<div style="width: 100%; background: #1e293b; padding: 15px 20px; border-bottom: 2px solid #3b82f6; display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: space-between; box-sizing: border-box;">');
-        html.push('  <div style="font-size: 18px; font-weight: bold; color: #f1f5f9;">📡 Видеострим МСБ55115</div>');
-        html.push('  <div style="display: flex; flex-grow: 1; max-width: 750px; gap: 8px; flex-wrap: wrap;">');
-        html.push('    <input type="text" id="stream-url-input" value="' + activeUrl + '" placeholder="Вставьте ссылку: https://salutejazz.ru..." style="flex-grow: 1; min-width: 220px; padding: 12px 15px; border-radius: 8px; border: 2px solid #3b82f6; background: #0f172a; color: #ffffff; font-size: 15px; outline: none; box-sizing: border-box;">');
-        html.push('    <button type="button" onclick="broadcastStreamUrl()" style="padding: 12px 20px; background: #22c55e; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 14px;">🚀 ЗАПУСТИТЬ У ВСЕХ</button>');
-        html.push('    <button type="button" onclick="stopBroadcastStream()" style="padding: 12px 16px; background: #f59e0b; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 14px;">⏹ СТОП</button>');
-        html.push('  </div>');
-        html.push('  <button type="button" onclick="closeStream()" style="padding: 12px 20px; background: #ef4444; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 14px;">⬅️ НАЗАД В ЖУРНАЛ</button>');
-        html.push('</div>');
+    var btnClose = document.createElement('button');
+    btnClose.innerText = 'Закрыть';
+    btnClose.style.cssText = 'width:100%;padding:10px;background:transparent;color:#94a3b8;border:none;cursor:pointer;font-size:14px;';
+    btnClose.onclick = closeStream;
 
-        html.push('<div style="flex-grow: 1; width: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 20px; box-sizing: border-box;">');
+    box.appendChild(title);
+    box.appendChild(btnOpen);
+    box.appendChild(btnClose);
+    win.appendChild(box);
+}
+
+function openStream() {
+    var activeUrl = window.currentSharedStreamUrl;
+
+    if (!isUserAdmin()) {
         if (activeUrl) {
-            html.push('  <div style="background: #1e293b; border: 3px solid #6366f1; border-radius: 16px; padding: 35px 25px; text-align: center; max-width: 500px; width: 100%;">');
-            html.push('    <div style="font-size: 55px; margin-bottom: 15px;">🎥</div>');
-            html.push('    <h2 style="margin: 0 0 15px 0; color: #ffffff;">Стрим активен!</h2>');
-            html.push('    <button type="button" onclick="openStreamExternal()" style="width: 100%; padding: 18px 24px; background: #6366f1; color: white; border: none; border-radius: 12px; font-weight: bold; cursor: pointer; font-size: 18px;">🚀 НА ВЕСЬ ЭКРАН</button>');
-            html.push('  </div>');
+            openAppPopupWindow(activeUrl);
         } else {
-            html.push('  <div style="text-align: center; padding: 20px; max-width: 500px;">');
-            html.push('    <div style="font-size: 50px; margin-bottom: 15px;">🎥</div>');
-            html.push('    <h3 style="margin: 0 0 10px 0; color: #f1f5f9;">Вставьте ссылку в поле сверху</h3>');
-            html.push('    <p style="color: #94a3b8; font-size: 14px;">Нажмите <b>«🚀 ЗАПУСТИТЬ У ВСЕХ»</b> — окно стрима развернётся на весь экран.</p>');
-            html.push('  </div>');
+            alert('Администратор еще не запустил видеострим.');
         }
-        html.push('</div>');
-
-        win.innerHTML = html.join('');
+        return;
     }
 
-    function closeStream() {
-        var win = document.getElementById('stream-window');
-        if (win) win.style.display = 'none';
+    var win = document.getElementById('stream-window');
+    if (!win) {
+        win = document.createElement('div');
+        win.id = 'stream-window';
+        document.body.appendChild(win);
+    }
+    win.innerHTML = '';
+    win.style.cssText = 'display:flex;position:fixed;top:0;left:0;width:100vw;height:100vh;background:#0f172a;z-index:999999;color:white;flex-direction:column;box-sizing:border-box;';
+
+    var bar = document.createElement('div');
+    bar.style.cssText = 'width:100%;background:#1e293b;padding:15px 20px;border-bottom:2px solid #3b82f6;display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;box-sizing:border-box;';
+
+    var lbl = document.createElement('div');
+    lbl.innerText = '📡 Управление стримом (АДМИН)';
+    lbl.style.cssText = 'font-size:18px;font-weight:bold;color:#f1f5f9;';
+
+    var ctrl = document.createElement('div');
+    ctrl.style.cssText = 'display:flex;flex-grow:1;max-width:750px;gap:8px;flex-wrap:wrap;';
+
+    var inp = document.createElement('input');
+    inp.type = 'text';
+    inp.id = 'stream-url-input';
+    inp.value = activeUrl;
+    inp.placeholder = 'Вставьте ссылку SaluteJazz...';
+    inp.style.cssText = 'flex-grow:1;min-width:220px;padding:12px 15px;border-radius:8px;border:2px solid #3b82f6;background:#0f172a;color:#ffffff;font-size:15px;outline:none;box-sizing:border-box;';
+
+    var btnStart = document.createElement('button');
+    btnStart.innerText = '🚀 ЗАПУСТИТЬ У ВСЕХ';
+    btnStart.style.cssText = 'padding:12px 20px;background:#22c55e;color:white;border:none;border-radius:8px;font-weight:bold;cursor:pointer;font-size:14px;';
+    btnStart.onclick = broadcastStreamUrl;
+
+    var btnStop = document.createElement('button');
+    btnStop.innerText = '⏹ СТОП';
+    btnStop.style.cssText = 'padding:12px 16px;background:#f59e0b;color:white;border:none;border-radius:8px;font-weight:bold;cursor:pointer;font-size:14px;';
+    btnStop.onclick = stopBroadcastStream;
+
+    var btnBack = document.createElement('button');
+    btnBack.innerText = '⬅️ НАЗАД В ЖУРНАЛ';
+    btnBack.style.cssText = 'padding:12px 20px;background:#ef4444;color:white;border:none;border-radius:8px;font-weight:bold;cursor:pointer;font-size:14px;';
+    btnBack.onclick = closeStream;
+
+    ctrl.appendChild(inp);
+    ctrl.appendChild(btnStart);
+    ctrl.appendChild(btnStop);
+
+    bar.appendChild(lbl);
+    bar.appendChild(ctrl);
+    bar.appendChild(btnBack);
+    win.appendChild(bar);
+}
+
+function broadcastStreamUrl() {
+    var input = document.getElementById('stream-url-input');
+    var url = input ? input.value.trim() : '';
+    if (!url) return alert('Сначала вставьте ссылку в поле ввода!');
+    if (url.indexOf('http://') !== 0 && url.indexOf('https://') !== 0) {
+        url = 'https://' + url;
     }
 
-    function openStreamExternal() {
-        var input = document.getElementById('stream-url-input');
-        var url = (input ? input.value.trim() : '') || window.currentSharedStreamUrl;
-        if (!url) return alert("Сначала вставьте ссылку в поле ввода!");
-        openAppPopupWindow(url);
-    }
+    window.currentSharedStreamUrl = url;
+    localStorage.setItem('msb_stream_url', url);
 
-    function broadcastStreamUrl() {
-        var input = document.getElementById('stream-url-input');
-        var url = input ? input.value.trim() : '';
-        if (!url) return alert("Сначала вставьте ссылку в поле ввода!");
-        if (url.indexOf('http://') !== 0 && url.indexOf('https://') !== 0) {
-            url = 'https://' + url;
-        }
-
-        window.currentSharedStreamUrl = url;
-        localStorage.setItem('msb_stream_url', url);
-
-        sendStreamWsMessage({
-            type: 'set_stream',
-            url: url,
-            forceOpen: true
-        });
-
-        openStream(url);
-        openAppPopupWindow(url);
-    }
-
-    function stopBroadcastStream() {
-        window.currentSharedStreamUrl = '';
-        localStorage.removeItem('msb_stream_url');
-        sendStreamWsMessage({
-            type: 'set_stream',
-            url: '',
-            forceOpen: false
-        });
-        openStream('');
-    }
-
-    document.addEventListener('click', function(e) {
-        var btn = e.target.closest('button, a, div');
-        if (btn && btn.innerText && btn.innerText.toLowerCase().indexOf('видеострим') !== -1 && (!btn.id || btn.id.indexOf('stream') === -1)) {
-            openStream();
-        }
+    sendStreamWsMessage({
+        type: 'set_stream',
+        url: url,
+        forceOpen: true
     });
+
+    openAppPopupWindow(url);
+}
+
+function stopBroadcastStream() {
+    window.currentSharedStreamUrl = '';
+    localStorage.removeItem('msb_stream_url');
+    var input = document.getElementById('stream-url-input');
+    if (input) input.value = '';
+    sendStreamWsMessage({
+        type: 'set_stream',
+        url: '',
+        forceOpen: false
+    });
+}
+
+document.addEventListener('click', function(e) {
+    var btn = e.target.closest('button, a, div');
+    if (btn && btn.innerText && btn.innerText.toLowerCase().indexOf('видеострим') !== -1 && (!btn.id || btn.id.indexOf('stream') === -1)) {
+        openStream();
+    }
+});
 </script>
+
 </body>
 </html>
