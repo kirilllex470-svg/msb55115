@@ -85,7 +85,6 @@ function createSolidPng(size) {
 
 const PNG_192 = createSolidPng(192);
 const PNG_512 = createSolidPng(512);
-
 const MANIFEST_JSON = JSON.stringify({
     id: "/",
     name: "Журнал событий МСБ55115",
@@ -132,7 +131,7 @@ const SW_CODE = [
     "    event.waitUntil(self.registration.showNotification(data.title, {",
     "        body: data.body,",
     "        icon: '/icon-192.png',",
-    "        vibrate: Array.of(800, 200, 800, 200, 800, 200, 1000),",
+    "        vibrate: [800, 200, 800, 200, 800, 200, 1000],",
     "        silent: false,",
     "        requireInteraction: true,",
     "        renotify: true,",
@@ -144,7 +143,7 @@ const SW_CODE = [
     "        self.registration.showNotification(event.data.title, {",
     "            body: event.data.body,",
     "            icon: '/icon-192.png',",
-    "            vibrate: Array.of(800, 200, 800, 200, 800, 200, 1000),",
+    "            vibrate: [800, 200, 800, 200, 800, 200, 1000],",
     "            silent: false,",
     "            requireInteraction: true,",
     "            renotify: true,",
@@ -210,6 +209,7 @@ const server = http.createServer(function(req, res) {
     res.writeHead(404);
     res.end('Not found');
 });
+
 const wss = new WebSocket.Server({ server: server });
 
 let tableHistory = new Array(); 
@@ -223,7 +223,6 @@ if (fs.existsSync(DB_FILE)) {
         tableHistory = new Array(); 
     }
 }
-
 wss.on('connection', function(ws) {
     ws.send(JSON.stringify({ 
         type: 'init', 
@@ -274,6 +273,7 @@ wss.on('connection', function(ws) {
             if (msg.type === 'clear_history') {
                 console.log('🗑️ АДМИН полностью очистил журнал событий');
                 tableHistory = new Array();
+                activeAlerts = {};
                 fs.writeFile(DB_FILE, JSON.stringify(tableHistory), function() {});
 
                 wss.clients.forEach(function(client) {
