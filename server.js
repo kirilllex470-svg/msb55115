@@ -365,7 +365,7 @@ wss.on('connection', function(ws) {
                         client.send(JSON.stringify({ type: 'alert_cleared', target: msg.target }));
                     }
                 });
-            }
+            
 
         } catch (e) { console.error("Ошибка:", e); }
     });
