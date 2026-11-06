@@ -318,23 +318,20 @@
             background: rgba(239, 68, 68, 0.08);
             color: #b91c1c;
         }
-        #stream-window {
+         #stream-window {
             display: none;
             position: fixed;
             top: 0;
             left: 0;
-            width: 100%;
-            height: 100%;
-            background: #000000;
+            width: 100vw;
+            height: 100vh;
+            background: #0f172a;
             z-index: 99999;
             color: white;
             flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            text-align: center;
-            padding: 20px;
             box-sizing: border-box;
         }
+
         .theme-btn {
             background: #475569;
             color: white;
@@ -367,26 +364,35 @@
     </style>
 </head>
 <body>
-    <div id="stream-window" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #0f172a; z-index: 99999; color: white; flex-direction: column; box-sizing: border-box;">
-        <!-- Верхняя компактная панель для ввода ссылки и управления -->
-        <div style="display: flex; gap: 10px; padding: 12px 15px; background: #1e293b; border-bottom: 1px solid #334155; align-items: center; flex-wrap: wrap;">
-            <span style="font-weight: bold; font-size: 16px; color: #3b82f6;">📡 Видеострим МСБ55115</span>
-            <input type="text" id="stream-url-input" placeholder="Вставьте ссылку (например, https://salutejazz.ru/calls/...)" style="flex-grow: 1; min-width: 240px; padding: 10px 14px; border-radius: 6px; border: 1px solid #334155; background: #0f172a; color: white; font-size: 14px; outline: none;">
-            <button type="button" onclick="launchStreamUrl()" style="padding: 10px 18px; background: #22c55e; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 14px;">▶️ ОТКРЫТЬ НА ВЕСЬ ЭКРАН</button>
-            <button type="button" onclick="openStreamExternal()" style="padding: 10px 14px; background: #3b82f6; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 13px;" title="Если браузер блокирует камеру во встроенном окне">↗️ В новой вкладке</button>
-            <button type="button" onclick="closeStream()" style="padding: 10px 18px; background: #ef4444; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 14px;">✖️ ЗАКРЫТЬ</button>
+    <!-- ОКНО ВИДЕОСТРИМА -->
+    <div id="stream-window" style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: #0f172a; z-index: 99999; color: white; flex-direction: column; box-sizing: border-box;">
+        <!-- Верхняя шапка с полем ввода ссылки -->
+        <div style="width: 100%; background: #1e293b; padding: 15px 20px; border-bottom: 2px solid #3b82f6; display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: space-between; box-sizing: border-box; z-index: 10;">
+            <div style="font-size: 18px; font-weight: bold; color: #f1f5f9;">📡 Видеострим МСБ55115</div>
+            
+            <div style="display: flex; flex-grow: 1; max-width: 700px; gap: 8px; flex-wrap: wrap;">
+                <input type="text" id="stream-url-input" placeholder="Вставьте ссылку: https://salutejazz.ru..." style="flex-grow: 1; min-width: 220px; padding: 12px 15px; border-radius: 8px; border: 2px solid #3b82f6; background: #0f172a; color: #ffffff; font-size: 15px; outline: none; box-sizing: border-box;">
+                <button type="button" onclick="launchStreamUrl()" style="padding: 12px 20px; background: #22c55e; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 14px;">▶️ ОТКРЫТЬ В ОКНЕ</button>
+                <button type="button" onclick="openStreamExternal()" style="padding: 12px 16px; background: #6366f1; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 14px;">🚀 НА ВЕСЬ ЭКРАН</button>
+            </div>
+
+            <button type="button" onclick="closeStream()" style="padding: 12px 20px; background: #ef4444; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 14px;">⬅️ НАЗАД В ЖУРНАЛ</button>
         </div>
 
-        <!-- Область на весь оставшийся экран -->
-        <div style="flex-grow: 1; position: relative; width: 100%; height: 100%; background: #000; display: flex; justify-content: center; align-items: center;">
-            <div id="stream-placeholder" style="color: #94a3b8; text-align: center; padding: 20px;">
-                <div style="font-size: 48px; margin-bottom: 10px;">🎥</div>
-                <div style="font-size: 18px; font-weight: bold; color: #f1f5f9; margin-bottom: 6px;">Вставьте ссылку на конференцию или стрим в поле сверху</div>
-                <div style="font-size: 14px;">Нажмите «ОТКРЫТЬ НА ВЕСЬ ЭКРАН», и трансляция развернется здесь</div>
+        <!-- Контейнер самого видеострима -->
+        <div style="flex-grow: 1; width: 100%; position: relative; background: #000000; display: flex; flex-direction: column; justify-content: center; align-items: center;">
+            <div id="stream-placeholder" style="text-align: center; padding: 20px; max-width: 500px;">
+                <div style="font-size: 50px; margin-bottom: 15px;">🎥</div>
+                <h3 style="margin: 0 0 10px 0; color: #f1f5f9;">Вставьте ссылку в поле сверху</h3>
+                <p style="color: #94a3b8; font-size: 14px; line-height: 1.5;">
+                    Нажмите <b>«▶️ ОТКРЫТЬ В ОКНЕ»</b>, чтобы развернуть стрим прямо здесь.<br>
+                    <i>Если экран остаётся пустым из-за защиты сайта, нажмите <b>«🚀 НА ВЕСЬ ЭКРАН»</b>.</i>
+                </p>
             </div>
-            <iframe id="stream-iframe" src="" allow="camera; microphone; fullscreen; display-capture; autoplay; clipboard-read; clipboard-write" style="display: none; width: 100%; height: 100%; border: none; position: absolute; top: 0; left: 0;"></iframe>
+            <iframe id="stream-iframe" src="" allow="camera *; microphone *; fullscreen *; display-capture *; autoplay *" allowfullscreen style="display: none; width: 100%; height: 100%; border: none; position: absolute; top: 0; left: 0;"></iframe>
         </div>
     </div>
+
 
 
     <div id="login-overlay">
@@ -584,25 +590,24 @@
     }
 
     function openStream() {
-        document.getElementById('stream-window').style.display = 'flex';
-        const savedUrl = localStorage.getItem('msb_stream_url');
-        if (savedUrl && !document.getElementById('stream-url-input').value) {
-            document.getElementById('stream-url-input').value = savedUrl;
+        const win = document.getElementById('stream-window');
+        if (win) {
+            win.style.display = 'flex';
+            const savedUrl = localStorage.getItem('msb_stream_url');
+            if (savedUrl) {
+                document.getElementById('stream-url-input').value = savedUrl;
+            }
         }
     }
 
     function closeStream() {
-        document.getElementById('stream-window').style.display = 'none';
-        // Останавливаем видео/звук при выходе в журнал
-        const iframe = document.getElementById('stream-iframe');
-        if (iframe) iframe.src = '';
-        document.getElementById('stream-iframe').style.display = 'none';
-        document.getElementById('stream-placeholder').style.display = 'block';
+        const win = document.getElementById('stream-window');
+        if (win) win.style.display = 'none';
     }
 
     function launchStreamUrl() {
         let url = document.getElementById('stream-url-input').value.trim();
-        if (!url) return alert("Пожалуйста, вставьте ссылку в поле!");
+        if (!url) return alert("Сначала вставьте ссылку в поле ввода!");
         if (!/^https?:\/\//i.test(url)) {
             url = 'https://' + url;
         }
@@ -615,12 +620,14 @@
 
     function openStreamExternal() {
         let url = document.getElementById('stream-url-input').value.trim();
-        if (!url) return alert("Сначала вставьте ссылку в поле!");
+        if (!url) return alert("Сначала вставьте ссылку в поле ввода!");
         if (!/^https?:\/\//i.test(url)) {
             url = 'https://' + url;
         }
-        window.open(url, '_blank');
+        localStorage.setItem('msb_stream_url', url);
+        window.open(url, 'SaluteJazzStream', 'width=' + screen.availWidth + ',height=' + screen.availHeight + ',top=0,left=0');
     }
+
 
     window.addEventListener('appinstalled', function() {
         deferredPrompt = null;
