@@ -346,7 +346,7 @@ wss.on('connection', function(ws) {
                     const isForAll = (msg.target === 'ВСЕМ');
                     const isExactTarget = (item.user && item.user === msg.target);
 
-                    if (isForAll || isExactTarget) {
+                             if (isForAll || isExactTarget) {
                         webpush.sendNotification(item.sub, payload, pushOptions)
                             .then(function() { console.log('---> Доставлено в шторку (' + (item.user || 'Гость') + ')'); })
                             .catch(function(err) {
@@ -357,6 +357,7 @@ wss.on('connection', function(ws) {
                             });
                     }
                 });
+            } // <--- Добавлена пропущенная скобка №1
 
             if (msg.type === 'clear_alert') {
                 delete activeAlerts[msg.target];
@@ -365,7 +366,7 @@ wss.on('connection', function(ws) {
                         client.send(JSON.stringify({ type: 'alert_cleared', target: msg.target }));
                     }
                 });
-            
+            } // <--- Добавлена пропущенная скобка №2
 
         } catch (e) { console.error("Ошибка:", e); }
     });
