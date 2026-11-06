@@ -13,54 +13,366 @@
     <link rel="apple-touch-icon" href="/icon-192.png">
     <title>МСБ55115</title>
     <style>
-        :root { --bg: #0f172a; --panel: #1e293b; --accent: #3b82f6; --text: #f1f5f9; --border: #334155; --danger: #ef4444; }
-        body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', monospace; margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; box-sizing: border-box; }
-        #login-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.98); z-index: 100; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 15px; box-sizing: border-box; }
-        .login-box { background: var(--panel); padding: 40px; border-radius: 16px; border: 1px solid var(--border); width: 100%; max-width: 320px; text-align: center; box-shadow: 0 20px 60px rgba(0,0,0,0.7); box-sizing: border-box; }
-        .login-box select, .login-box input { width: 100%; padding: 14px; margin-bottom: 20px; background: #0f172a; border: 1px solid var(--border); color: white; border-radius: 8px; font-size: 16px; outline: none; box-sizing: border-box; }
-        .login-box button { width: 100%; padding: 14px; background: var(--accent); color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; transition: 0.2s; }
+        :root {
+            --bg: #0f172a;
+            --panel: #1e293b;
+            --accent: #3b82f6;
+            --text: #f1f5f9;
+            --border: #334155;
+            --danger: #ef4444;
+            --input-bg: #0f172a;
+            --table-header: #1e293b;
+            --notif-bg-wrapper: rgba(30, 41, 59, 0.7);
+        }
+        body.light-theme {
+            --bg: #f1f5f9;
+            --panel: #ffffff;
+            --accent: #2563eb;
+            --text: #0f172a;
+            --border: #cbd5e1;
+            --danger: #dc2626;
+            --input-bg: #ffffff;
+            --table-header: #e2e8f0;
+            --notif-bg-wrapper: rgba(255, 255, 255, 0.95);
+        }
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: 'Segoe UI', monospace;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            box-sizing: border-box;
+            transition: background 0.2s, color 0.2s;
+        }
+        #login-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(15, 23, 42, 0.98);
+            z-index: 100;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 15px;
+            box-sizing: border-box;
+        }
+        .login-box {
+            background: var(--panel);
+            padding: 30px 20px;
+            border-radius: 16px;
+            border: 1px solid var(--border);
+            width: 100%;
+            max-width: 360px;
+            text-align: center;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.7);
+            box-sizing: border-box;
+        }
+        .login-box select, .login-box input {
+            width: 100%;
+            padding: 14px;
+            margin-bottom: 15px;
+            background: var(--input-bg);
+            border: 1px solid var(--border);
+            color: var(--text);
+            border-radius: 8px;
+            font-size: 16px;
+            outline: none;
+            box-sizing: border-box;
+        }
+        .login-box button {
+            width: 100%;
+            padding: 14px;
+            background: var(--accent);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: 0.2s;
+        }
         .login-box button:hover { background: #2563eb; }
-        .viewer-btn { background: transparent !important; border: 1px solid #475569 !important; color: #94a3b8 !important; margin-top: 15px; }
+        .viewer-btn {
+            background: transparent !important;
+            border: 1px solid #475569 !important;
+            color: #94a3b8 !important;
+            margin-top: 15px;
+        }
         .viewer-btn:hover { background: #1e293b !important; color: white !important; }
-        .install-btn { display: none; width: 100%; background: #10b981 !important; color: white !important; border: none !important; margin-top: 15px; padding: 12px 15px; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 14px; box-sizing: border-box; }
+        .install-btn {
+            display: block;
+            width: 100%;
+            background: #10b981 !important;
+            color: white !important;
+            border: none !important;
+            margin-top: 15px;
+            padding: 12px 15px;
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
+            font-size: 14px;
+            box-sizing: border-box;
+        }
         .error-msg { color: var(--danger); font-size: 14px; margin-top: 10px; display: none; }
-        .input-panel { background: var(--panel); padding: 25px; border-radius: 12px; border: 1px solid var(--border); width: 100%; max-width: 1200px; margin-bottom: 30px; display: none; box-sizing: border-box; }
-        .inputs-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 15px; margin-bottom: 20px; }
-        .field-group label { display: block; font-size: 13px; color: #94a3b8; margin-bottom: 5px; font-weight: bold; }
-        .field-group select, .field-group input { width: 100%; padding: 12px; background: #0f172a; border: 1px solid var(--border); color: white; border-radius: 6px; font-size: 16px; outline: none; box-sizing: border-box; }
-        .send-btn { width: 100%; padding: 15px; background: #22c55e; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; }
-        #admin-zone { display: none; margin-top: 30px; padding: 20px; border: 2px solid var(--danger); border-radius: 10px; background: rgba(239, 68, 68, 0.1); }
+        .input-panel {
+            background: var(--panel);
+            padding: 25px;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            width: 100%;
+            max-width: 1400px;
+            margin-bottom: 30px;
+            display: none;
+            box-sizing: border-box;
+        }
+        .inputs-grid {
+            display: grid;
+            grid-template-columns: repeat(6, 1fr);
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        .field-group label {
+            display: block;
+            font-size: 13px;
+            color: #94a3b8;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        .field-group select, .field-group input {
+            width: 100%;
+            padding: 12px;
+            background: var(--input-bg);
+            border: 1px solid var(--border);
+            color: var(--text);
+            border-radius: 6px;
+            font-size: 16px;
+            outline: none;
+            box-sizing: border-box;
+        }
+        .send-btn {
+            width: 100%;
+            padding: 15px;
+            background: #22c55e;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .stream-btn {
+            width: 100%;
+            padding: 15px;
+            background: #6366f1;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 15px;
+            text-align: center;
+        }
+        #admin-zone {
+            display: none;
+            margin-top: 30px;
+            padding: 20px;
+            border: 2px solid var(--danger);
+            border-radius: 10px;
+            background: rgba(239, 68, 68, 0.1);
+        }
         .admin-controls { display: flex; gap: 10px; }
-        .admin-controls select { width: 200px; padding: 12px; border-radius: 6px; border: none; font-size: 16px; }
-        .admin-controls input { flex-grow: 1; padding: 12px; border-radius: 6px; border: none; font-size: 16px; }
-        .admin-controls button { padding: 12px 20px; background: var(--danger); color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; }
-        #alert-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(185, 28, 28, 0.98); z-index: 99999; flex-direction: column; justify-content: center; align-items: center; text-align: center; padding: 15px; box-sizing: border-box; }
-        .alert-content { background: white; color: #b91c1c; padding: 30px; border-radius: 20px; width: 100%; max-width: 600px; box-shadow: 0 0 50px rgba(0,0,0,0.5); animation: shake 0.5s infinite; box-sizing: border-box; }
-        @keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-5px); } 75% { transform: translateX(5px); } }
-        .alert-btn { margin-top: 20px; width: 100%; padding: 18px; font-size: 20px; background: #b91c1c; color: white; border: none; border-radius: 10px; cursor: pointer; font-weight: bold; }
-        .history-container { width: 100%; max-width: 1400px; overflow-x: auto; -webkit-overflow-scrolling: touch; border-radius: 8px; }
-        table { width: 100%; border-collapse: collapse; min-width: 850px; }
-        th, td { border: 1px solid var(--border); padding: 10px; text-align: center; font-size: 14px; }
-        th { background: #1e293b; color: #94a3b8; }
+        .admin-controls select {
+            width: 200px;
+            padding: 12px;
+            border-radius: 6px;
+            border: 1px solid var(--border);
+            font-size: 16px;
+            background: var(--input-bg);
+            color: var(--text);
+        }
+        .admin-controls input {
+            flex-grow: 1;
+            padding: 12px;
+            border-radius: 6px;
+            border: 1px solid var(--border);
+            font-size: 16px;
+            background: var(--input-bg);
+            color: var(--text);
+        }
+        .admin-controls button {
+            padding: 12px 20px;
+            background: var(--danger);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        #clear-history-box {
+            display: none;
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid rgba(239, 68, 68, 0.3);
+        }
+        #alert-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(185, 28, 28, 0.98);
+            z-index: 99999;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            padding: 15px;
+            box-sizing: border-box;
+        }
+        .alert-content {
+            background: white;
+            color: #b91c1c;
+            padding: 30px;
+            border-radius: 20px;
+            width: 100%;
+            max-width: 600px;
+            box-shadow: 0 0 50px rgba(0,0,0,0.5);
+            animation: shake 0.5s infinite;
+            box-sizing: border-box;
+        }
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+        }
+        .alert-btn {
+            margin-top: 20px;
+            width: 100%;
+            padding: 18px;
+            font-size: 20px;
+            background: #b91c1c;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        .history-container, .notif-container {
+            width: 100%;
+            max-width: 1400px;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            border-radius: 8px;
+            margin-bottom: 25px;
+        }
+        .notif-box-wrapper {
+            width: 100%;
+            max-width: 1400px;
+            background: var(--notif-bg-wrapper);
+            border: 2px solid var(--accent);
+            border-radius: 12px;
+            padding: 20px;
+            box-sizing: border-box;
+            margin-bottom: 25px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 850px;
+            background: var(--panel);
+        }
+        th, td {
+            border: 1px solid var(--border);
+            padding: 10px;
+            text-align: center;
+            font-size: 14px;
+        }
+        th { background: var(--table-header); color: #94a3b8; }
         .new-row { animation: fadeIn 0.5s ease; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
         .time-cell { color: #facc15; font-family: monospace; }
         .user-cell { font-weight: bold; }
-        .ack-row td { background: rgba(34, 197, 94, 0.1); color: #86efac; font-style: italic; }
-        .alert-row td { background: rgba(239, 68, 68, 0.15); color: #fca5a5; font-weight: bold; }
+        .ack-row td {
+            background: rgba(34, 197, 94, 0.1);
+            color: #86efac;
+            font-style: italic;
+        }
+        body.light-theme .ack-row td {
+            background: rgba(34, 197, 94, 0.15);
+            color: #16a34a;
+        }
+        .alert-row td {
+            background: rgba(239, 68, 68, 0.15);
+            color: #fca5a5;
+            font-weight: bold;
+        }
+        body.light-theme .alert-row td {
+            background: rgba(239, 68, 68, 0.08);
+            color: #b91c1c;
+        }
+        #stream-window {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #000000;
+            z-index: 99999;
+            color: white;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+        .theme-btn {
+            background: #475569;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+        }
         @media (max-width: 768px) {
             body { padding: 10px; }
             .login-box { padding: 25px 20px; }
             .input-panel { padding: 15px; margin-bottom: 20px; }
             .inputs-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
             .admin-controls { flex-direction: column; }
-            .admin-controls select, .admin-controls input, .admin-controls button { width: 100%; box-sizing: border-box; }
+            .admin-controls select, .admin-controls input, .admin-controls button {
+                width: 100%;
+                box-sizing: border-box;
+            }
             .alert-content h1 { font-size: 28px !important; }
-            #alert-text { font-size: 22px !important; padding: 15px !important; word-break: break-word; }
+            #alert-text {
+                font-size: 22px !important;
+                padding: 15px !important;
+                word-break: break-word;
+            }
         }
-        @media (max-width: 480px) { .inputs-grid { grid-template-columns: 1fr; } }
+        @media (max-width: 480px) {
+            .inputs-grid { grid-template-columns: 1fr; }
+        }
     </style>
 </head>
 <body>
+    <div id="stream-window">
+        <h1 style="font-size: 40px; margin: 0 0 10px 0;">📡 Видеострим МСБ55115</h1>
+        <p style="color: #94a3b8; font-size: 18px; margin-bottom: 30px;">Экран трансляции пуст. Ожидание входящего потока данных...</p>
+        <button type="button" onclick="closeStream()" style="padding: 15px 35px; background: var(--danger); color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 16px;">ВЕРНУТЬСЯ В ЖУРНАЛ</button>
+    </div>
+
     <div id="alert-modal">
         <div class="alert-content">
             <h1 style="font-size: 40px; margin: 0;">🛑 СООБЩЕНИЕ!</h1>
@@ -69,29 +381,56 @@
             <button type="button" class="alert-btn" onclick="confirmAlert()">ДА, Я ПОНЯЛ</button>
         </div>
     </div>
+
     <div id="login-overlay">
         <div class="login-box">
-            <h2 style="color:white; margin-top:0;">🔐 Доступ в МСБ55115</h2>
-            <div style="text-align: left; color: #94a3b8; font-size: 13px; margin-bottom: 5px;">Подразделение:</div>
-            <select id="login-select" onchange="document.getElementById('login-error').style.display='none'"></select>
-            <div style="text-align: left; color: #94a3b8; font-size: 13px; margin-bottom: 5px;">Пароль:</div>
-            <input type="password" id="login-pass" placeholder="••••" autocomplete="off" oninput="document.getElementById('login-error').style.display='none'">
-            <button type="button" onclick="attemptLogin()">ВОЙТИ</button>
-            <button type="button" class="viewer-btn" onclick="loginAsViewer()">Просто смотреть</button>
-            <button type="button" class="install-btn pwa-install-btn" onclick="installPWA()">📲 УСТАНОВИТЬ ПРИЛОЖЕНИЕ</button>
-            <div id="login-error" style="color: #ef4444; font-size: 14px; margin-top: 10px; display: none;">❌ Неверный пароль</div>
+            <h2 style="color:var(--text); margin-top:0; font-size: 22px;">🔐 Доступ в МСБ55115</h2>
+            
+            <div style="text-align: left; color: #94a3b8; font-size: 13px; margin-bottom: 8px; font-weight: bold;">
+                1. ВЫБЕРИТЕ ВАШЕ ПОДРАЗДЕЛЕНИЕ:
+            </div>
+            
+            <div id="user-badges-grid" style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 20px;">
+                <button type="button" onclick="selectSubdivision(0, 'ШР', '#3b82f6')" style="padding: 12px; background: #1e293b; color: #3b82f6; border: 2px solid #3b82f6; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 14px;">ШР</button>
+                <button type="button" onclick="selectSubdivision(1, 'РОТА-1', '#a855f7')" style="padding: 12px; background: #1e293b; color: #a855f7; border: 2px solid #a855f7; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 14px;">РОТА-1</button>
+                <button type="button" onclick="selectSubdivision(2, 'РОТА-2', '#22c55e')" style="padding: 12px; background: #1e293b; color: #22c55e; border: 2px solid #22c55e; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 14px;">РОТА-2</button>
+                <button type="button" onclick="selectSubdivision(3, 'РОТА-3', '#eab308')" style="padding: 12px; background: #1e293b; color: #eab308; border: 2px solid #eab308; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 14px;">РОТА-3</button>
+                <button type="button" onclick="selectSubdivision(4, 'АДМИН', '#ef4444')" style="grid-column: span 2; padding: 12px; background: #1e293b; color: #ef4444; border: 2px solid #ef4444; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 14px;">🛠️ АДМИНИСТРАТОР</button>
+            </div>
+
+            <select id="login-select" style="display: none;"></select>
+
+            <div id="password-block" style="display: none; animation: fadeIn 0.3s ease;">
+                <div style="text-align: left; color: #94a3b8; font-size: 13px; margin-bottom: 5px; font-weight: bold;">
+                    2. ВВЕДИТЕ ПАРОЛЬ ДЛЯ <span id="selected-user-label" style="text-transform: uppercase;"></span>:
+                </div>
+                <input type="password" id="login-pass" placeholder="••••" autocomplete="off" oninput="document.getElementById('login-error').style.display='none'">
+                <button type="button" onclick="attemptLogin()" style="margin-bottom: 10px;">ВОЙТИ В СИСТЕМУ</button>
+            </div>
+
+            <button type="button" class="viewer-btn" onclick="loginAsViewer()" style="width:100%;">Просто смотреть</button>
+            
+            <button type="button" id="pwa-main-btn" class="install-btn pwa-install-btn" onclick="installPWA()">📲 УСТАНОВИТЬ ПРИЛОЖЕНИЕ</button>
+            <div id="pwa-help-text" style="color: #64748b; font-size: 11px; margin-top: 8px; line-height: 1.3;">
+                Если кнопка не реагирует: нажмите меню браузера <br><strong>«Добавить на гл. экран»</strong> или <strong>«Установить»</strong>.
+            </div>
+            
+            <div id="login-error" style="color: #ef4444; font-size: 14px; margin-top: 10px; display: none; font-weight: bold;">❌ Неверный пароль</div>
         </div>
     </div>
     <div class="input-panel" id="input-panel">
         <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:15px;">
             <h3 style="margin:0;">📝 ПОДРАЗДЕЛЕНИЕ: <span id="my-name"></span></h3>
             <div style="display:flex; gap:10px;">
-                <button type="button" class="install-btn pwa-install-btn" style="width:auto; margin-top:0; padding:8px 15px;" onclick="installPWA()">📲 Установить</button>
+                <button type="button" class="theme-btn" onclick="toggleTheme()">🌓 Смена темы</button>
+                <button type="button" class="install-btn pwa-install-btn" style="width:auto; margin-top:0; padding:8px 15px; display:none;" onclick="installPWA()">📲 Установить</button>
                 <button type="button" onclick="logoutUser()" style="background:#334155; color:white; border:none; padding:8px 15px; border-radius:6px; cursor:pointer; font-weight:bold;">Выход</button>
             </div>
         </div>
         <div class="inputs-grid" id="dynamic-inputs"></div>
         <button type="button" class="send-btn" onclick="submitRow()">📤 ЗАПИСАТЬ В ЖУРНАЛ</button>
+        <button type="button" class="stream-btn" onclick="openStream()">📺 ВИДЕОСТРИМ МСБ55115</button>
+        
         <div id="admin-zone">
             <h3 style="color: #ef4444; margin-top: 0;">⚡ УПРАВЛЕНИЕ И СВЯЗЬ</h3>
             <div style="color: #fca5a5; margin-bottom: 10px; font-size: 14px;">Отправить уведомление подразделению:</div>
@@ -105,7 +444,25 @@
             </div>
         </div>
     </div>
-    <h3 style="color:#94a3b8; width: 100%; max-width: 1400px; margin: 10px 0;">📊 Журнал событий</h3>
+    
+    <div class="notif-box-wrapper" id="notif-box-wrapper">
+        <h3 style="margin: 0 0 15px 0; color: #ef4444; font-size: 16px;">🚨 ОКНО ОПЕРАТИВНЫХ УВЕДОМЛЕНИЙ (КТО КОМУ ПИШЕТ)</h3>
+        <div class="notif-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th style="width: 130px;">🕒 Время</th>
+                        <th style="width: 130px;">👤 Отправитель</th>
+                        <th style="width: 130px;">🎯 Получатель</th>
+                        <th>💬 Текст сообщения / Статус ознакомления</th>
+                    </tr>
+                </thead>
+                <tbody id="notif-table-body"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <h3 style="color:#94a3b8; width: 100%; max-width: 1400px; margin: 10px 0;">📊 Журнал боевых событий</h3>
     <div class="history-container">
         <table>
             <thead>
@@ -117,6 +474,7 @@
             <tbody id="table-body"></tbody>
         </table>
     </div>
+
 <script>
     const USERS_CONFIG = [
         { name: "ШР", pass: "551151111", color: "#3b82f6" },
@@ -126,7 +484,6 @@
         { name: "АДМИН", pass: "5555", color: "#ef4444" }
     ];
     const ADMIN_NAME = "АДМИН";
-
     const COLUMNS_CONFIG = [
         { label: "ГРУППА", options: ["1", "2", "3", "4", "5"] },
         { label: "ИСХОДНИКИ", options: [
@@ -142,7 +499,7 @@
             "СИНИЯ", "ЖЕЛТАЯ", "ОРАНЖЕВАЯ", "КРАСНАЯ", "РОЗОВАЯ",
             "РОЗОВАЯ-А", "БЕЖЕВАЯ", "КОРИЧНЕВАЯ", "ЧЕРНАЯ", "БОРДОВАЯ"
         ]},
-        { label: "НОМЕР ТОЧКИ", options: new Array(), digitsOnly: true },
+        { label: "НОМЕР ТОЧКИ", options: new Array(), allowSlashFraction: true },
         { label: "ЛЕСОПОЛОСА", options: [
             "ФАКС", "ЗУБР1", "ПОЭТ", "СУДЬЯ", "СОР4", "ЗАМЕНА", "КРАСКА",
             "МАСТАК1", "ВОЛК3", "АНГЕЛ", "ВАЛИК1", "ЛЕЖАК", "ЛОТ ", "ПРИНТ7",
@@ -178,6 +535,54 @@
     let sirenAudio = null;
     let publicVapidKey = null;
     let deferredPrompt = null;
+
+    function selectSubdivision(index, name, color) {
+        const selectEl = document.getElementById('login-select');
+        if (selectEl) { selectEl.value = index; }
+        
+        const buttons = document.querySelectorAll('#user-badges-grid button');
+        buttons.forEach(function(btn) {
+            btn.style.background = '#1e293b';
+            if (btn.innerText.indexOf(name) !== -1 || (name === 'АДМИН' && btn.innerText.indexOf('АДМИНИСТРАТОР') !== -1)) {
+                btn.style.background = color;
+                btn.style.color = '#ffffff';
+            } else {
+                if (btn.innerText.indexOf('ШР') !== -1) btn.style.color = '#3b82f6';
+                if (btn.innerText.indexOf('РОТА-1') !== -1) btn.style.color = '#a855f7';
+                if (btn.innerText.indexOf('РОТА-2') !== -1) btn.style.color = '#22c55e';
+                if (btn.innerText.indexOf('РОТА-3') !== -1) btn.style.color = '#eab308';
+                if (btn.innerText.indexOf('АДМИНИСТРАТОР') !== -1) btn.style.color = '#ef4444';
+            }
+        });
+
+        document.getElementById('selected-user-label').innerText = name;
+        document.getElementById('selected-user-label').style.color = color;
+        document.getElementById('password-block').style.display = 'block';
+        document.getElementById('login-error').style.display = 'none';
+        
+        setTimeout(function() {
+            document.getElementById('login-pass').focus();
+        }, 50);
+    }
+    function toggleTheme() {
+        const isLight = document.body.classList.toggle('light-theme');
+        localStorage.setItem('journal_theme', isLight ? 'light' : 'dark');
+    }
+
+    function initTheme() {
+        const saved = localStorage.getItem('journal_theme');
+        if (saved === 'light') {
+            document.body.classList.add('light-theme');
+        }
+    }
+
+    function openStream() {
+        document.getElementById('stream-window').style.display = 'flex';
+    }
+
+    function closeStream() {
+        document.getElementById('stream-window').style.display = 'none';
+    }
 
     window.addEventListener('beforeinstallprompt', function(e) {
         e.preventDefault();
@@ -238,6 +643,7 @@
             }
         } catch (e) { console.error('Push error:', e); }
     }
+
     function sendLocalNotification(target, text, sender) {
         const fromWho = sender || 'АДМИН';
         const title = '🛑 ТРЕВОГА ДЛЯ [' + target + ']!';
@@ -334,7 +740,6 @@
             setTimeout(function() { osc.stop(); }, 450);
         } catch(e) {}
     }
-
     function connectWS() {
         if (ws && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING)) return;
         ws = new WebSocket(location.origin.replace(/^http/, 'ws'));
@@ -343,6 +748,7 @@
             const msg = JSON.parse(event.data);
             if (msg.type === 'init') {
                 document.getElementById('table-body').innerHTML = '';
+                document.getElementById('notif-table-body').innerHTML = '';
                 msg.data.forEach(appendRow);
                 if (msg.vapidPublicKey) {
                     publicVapidKey = msg.vapidPublicKey;
@@ -356,6 +762,7 @@
             if (msg.type === 'new_row') appendRow(msg.row);
             if (msg.type === 'history_cleared') {
                 document.getElementById('table-body').innerHTML = '';
+                document.getElementById('notif-table-body').innerHTML = '';
             }
             if (msg.type === 'admin_alert') {
                 pendingAlerts[msg.target] = {
@@ -373,6 +780,7 @@
 
         ws.onclose = function() { setTimeout(connectWS, 1500); };
     }
+    
     setInterval(function() {
         if (ws && ws.readyState === WebSocket.OPEN) {
             ws.send(JSON.stringify({ type: 'ping' }));
@@ -380,6 +788,7 @@
             connectWS();
         }
     }, 4000);
+
     function populateTargetSelect() {
         const adminSelect = document.getElementById('admin-target');
         adminSelect.innerHTML = '';
@@ -416,6 +825,7 @@
     }
 
     function initApp() {
+        initTheme();
         document.getElementById('login-error').style.display = 'none';
 
         if ('serviceWorker' in navigator) {
@@ -455,8 +865,8 @@
             if (col.options && col.options.length > 0) {
                 let opts = col.options.map(function(o) { return '<option>' + o + '</option>'; }).join('');
                 inputHtml = '<select id="in-' + index + '"><option value="" disabled selected>-</option>' + opts + '</select>';
-            } else if (col.digitsOnly) {
-                inputHtml = '<input type="text" inputmode="numeric" pattern="[0-9]*" id="in-' + index + '" placeholder="Только цифры..." oninput="this.value = this.value.replace(/[^0-9]/g, \'\')">';
+            } else if (col.allowSlashFraction) {
+                inputHtml = '<input type="text" id="in-' + index + '" placeholder="Цифры, дробь, /..." oninput="this.value = this.value.replace(/[^0-9\\/\\\\.,-]/g, \'\')">';
             } else {
                 inputHtml = '<input type="text" id="in-' + index + '" placeholder="...">';
             }
@@ -497,6 +907,7 @@
             document.getElementById('login-error').style.display = 'block';
         }
     }
+
     function logoutUser() {
         localStorage.removeItem('journal_user');
         localStorage.removeItem('journal_color');
@@ -509,7 +920,6 @@
         subscribeToWebPush();
         checkAndShowAlerts(false);
     }
-
     function sendAdminAlert() {
         if (!currentUser) return;
         const target = document.getElementById('admin-target').value;
@@ -528,13 +938,13 @@
             text: msg 
         }));
 
-        alert("Уведомление отправлено и записано в журнал!");
+        alert("Уведомление отправлено и записано в отдельное окно!");
         document.getElementById('admin-msg').value = '';
     }
 
     function clearHistoryAdmin() {
         if (currentUser !== ADMIN_NAME) return;
-        if (confirm("⚠️ Вы уверены, что хотите ПОЛНОСТЬЮ очистить весь журнал событий у всех участников?")) {
+        if (confirm("⚠️ Вы уверены, что хотите ПОЛНОСТЬЮ очистить все журналы и уведомления у всех?")) {
             ws.send(JSON.stringify({ type: 'clear_history' }));
         }
     }
@@ -544,6 +954,7 @@
         if (typeof raw === 'string') return { text: raw, sender: ADMIN_NAME };
         return raw;
     }
+
     function checkAndShowAlerts(isNew) {
         let targetToShow = null;
 
@@ -649,8 +1060,8 @@
         let isEmpty = true;
         for (let i = 0; i < COLUMNS_CONFIG.length; i++) {
             let val = document.getElementById('in-' + i).value;
-            if (COLUMNS_CONFIG.at(i).digitsOnly && val) {
-                val = val.replace(/[^0-9]/g, '');
+            if (COLUMNS_CONFIG.at(i).allowSlashFraction && val) {
+                val = val.replace(/[^0-9\\/\\\\.,-]/g, '');
             }
             values.push(val);
             if(val) isEmpty = false;
@@ -670,17 +1081,40 @@
     }
 
     function appendRow(row) {
+        if (row.values && row.values.at(0)) {
+            const firstCol = String(row.values.at(0));
+            const isAck = firstCol.indexOf("ОЗНАКОМЛЕН") !== -1;
+            const isNotif = firstCol.indexOf("УВЕДОМЛЕНИЕ") !== -1;
+
+            if (isAck || isNotif) {
+                const notifBody = document.getElementById('notif-table-body');
+                const tr = document.createElement('tr');
+                tr.className = isNotif ? 'alert-row new-row' : 'ack-row new-row';
+
+                let sender = row.user;
+                let target = "ВСЕМ";
+                let text = "-";
+
+                if (isNotif) {
+                    target = String(row.values.at(1) || '').replace("КОМУ: ", "");
+                    text = String(row.values.at(row.values.length - 1) || '').replace("Текст: ", "");
+                } else {
+                    sender = row.user;
+                    target = String(row.values.at(1) || '').replace("ОТ: ", "");
+                    text = String(row.values.at(row.values.length - 1) || '').replace("Сообщение: ", "");
+                }
+
+                tr.innerHTML = '<td class="time-cell">' + row.time + '</td><td style="color:' + row.color + '; font-weight:bold;">' + sender + '</td><td style="font-weight:bold; color:#ef4444;">' + target + '</td><td style="text-align:left; padding-left:15px;">' + text + '</td>';
+                notifBody.appendChild(tr);
+                requestAnimationFrame(function() { tr.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); });
+                return;
+            }
+        }
+
         const tbody = document.getElementById('table-body');
         const tr = document.createElement('tr');
         tr.className = 'new-row';
-        if (row.values && row.values.at(0)) {
-            const firstCol = String(row.values.at(0));
-            if (firstCol.indexOf("ОЗНАКОМЛЕН") !== -1) {
-                tr.classList.add('ack-row');
-            } else if (firstCol.indexOf("УВЕДОМЛЕНИЕ") !== -1) {
-                tr.classList.add('alert-row');
-            }
-        }
+        
         let html = '<td class="time-cell">' + row.time + '</td><td class="user-cell" style="color: ' + row.color + '">' + row.user + '</td>';
         
         for (let i = 0; i < COLUMNS_CONFIG.length; i++) {
