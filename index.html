@@ -1166,22 +1166,17 @@
     window.currentSharedStreamUrl = localStorage.getItem('msb_stream_url') || '';
     window.streamWs = null;
 
-    function isStreamAdmin() {
-        try {
-            for (var i = 0; i < localStorage.length; i++) {
-                var k = localStorage.key(i);
-                var val = String(localStorage.getItem(k) || '').toUpperCase();
-                if (val.indexOf('АДМИН') !== -1 || val.indexOf('ADMIN') !== -1) return true;
-            }
-            var selects = document.querySelectorAll('select');
-            for (var j = 0; j < selects.length; j++) {
-                var v = (selects[j].value || '').toUpperCase();
-                if (v.indexOf('АДМИН') !== -1 || v.indexOf('ADMIN') !== -1) return true;
-            }
-            if (typeof currentUser !== 'undefined' && String(currentUser).toUpperCase().indexOf('АДМИН') !== -1) return true;
-            if (typeof currentRole !== 'undefined' && String(currentRole).toUpperCase().indexOf('АДМИН') !== -1) return true;
-        } catch (e) {}
-        return false;
+    // То самое открытие в отдельном окне приложения (без вкладок и панелей браузера)
+    function openAppPopupWindow(url) {
+        if (!url) return;
+        if (url.indexOf('http://') !== 0 && url.indexOf('https://') !== 0) {
+            url = 'https://' + url;
+        }
+        window.open(
+            url,
+            'SaluteJazzStream',
+            'width=' + screen.availWidth + ',height=' + screen.availHeight + ',top=0,left=0,toolbar=no,menubar=no,location=no,status=no'
+        );
     }
 
     function initDedicatedStreamWs() {
@@ -1205,17 +1200,13 @@
                         }
 
                         var win = document.getElementById('stream-window');
-                        // Когда Админ нажал "ЗАПУСТИТЬ У ВСЕХ" — открываем прямо внутри приложения!
                         if (msg.forceOpen && msg.url) {
                             openStream(msg.url);
+                            openAppPopupWindow(msg.url);
                         } else if (!msg.url && win) {
-                            if (!isStreamAdmin()) {
-                                closeStream();
-                            } else {
-                                applyStreamUrlToIframe('');
-                            }
+                            closeStream();
                         } else if (win && win.style.display !== 'none') {
-                            applyStreamUrlToIframe(msg.url);
+                            openStream(msg.url);
                         }
                     }
                 } catch (e) {}
@@ -1234,9 +1225,9 @@
             window.streamWs.send(JSON.stringify(data));
         }
     }
-     function openStream(autoUrl) {
+
+    function openStream(autoUrl) {
         var activeUrl = (autoUrl !== undefined) ? autoUrl : window.currentSharedStreamUrl;
-        var adminMode = isStreamAdmin();
 
         var win = document.getElementById('stream-window');
         if (!win) {
@@ -1247,65 +1238,34 @@
 
         win.style.cssText = 'display: flex !important; position: fixed !important; top: 0 !important; left: 0 !important; width: 100vw !important; height: 100vh !important; background: #0f172a !important; z-index: 999999 !important; color: white !important; flex-direction: column !important; box-sizing: border-box !important;';
 
-        var placeholderDisplay = activeUrl ? 'none' : 'block';
-        var iframeDisplay = activeUrl ? 'block' : 'none';
-        var iframeSrc = getIframeLoadUrl(activeUrl);
-        var isSalute = activeUrl && activeUrl.toLowerCase().indexOf('salutejazz') !== -1;
-
         var html = [];
-        html.push('<div style="width: 100%; background: #1e293b; padding: 10px 16px; border-bottom: 2px solid #3b82f6; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: space-between; box-sizing: border-box; z-index: 10;">');
-        html.push('  <div style="font-size: 16px; font-weight: bold; color: #f1f5f9;">📡 Видеострим МСБ55115</div>');
-
-        if (adminMode || !activeUrl) {
-            html.push('  <div style="display: flex; flex-grow: 1; max-width: 820px; gap: 6px; flex-wrap: wrap;">');
-            html.push('    <input type="text" id="stream-url-input" value="' + activeUrl + '" placeholder="Вставьте ссылку или нажмите Встроенный стрим ->" style="flex-grow: 1; min-width: 180px; padding: 8px 12px; border-radius: 6px; border: 2px solid #3b82f6; background: #0f172a; color: #ffffff; font-size: 13px; outline: none; box-sizing: border-box;">');
-            html.push('    <button type="button" onclick="broadcastStreamUrl()" style="padding: 8px 14px; background: #22c55e; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 12px;">📡 ЗАПУСТИТЬ У ВСЕХ</button>');
-            html.push('    <button type="button" onclick="startBuiltInRoom()" style="padding: 8px 14px; background: #3b82f6; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 12px;">📹 ВСТРОЕННЫЙ СТРИМ</button>');
-            html.push('    <button type="button" onclick="stopBroadcastStream()" style="padding: 8px 12px; background: #ef4444; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 12px;">⏹ СТОП</button>');
-            html.push('  </div>');
-        }
-
-        html.push('  <button type="button" onclick="closeStream()" style="padding: 8px 14px; background: #475569; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 12px;">⬅️ СВЕРНУТЬ В ЖУРНАЛ</button>');
+        html.push('<div style="width: 100%; background: #1e293b; padding: 15px 20px; border-bottom: 2px solid #3b82f6; display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: space-between; box-sizing: border-box;">');
+        html.push('  <div style="font-size: 18px; font-weight: bold; color: #f1f5f9;">📡 Видеострим МСБ55115</div>');
+        html.push('  <div style="display: flex; flex-grow: 1; max-width: 750px; gap: 8px; flex-wrap: wrap;">');
+        html.push('    <input type="text" id="stream-url-input" value="' + activeUrl + '" placeholder="Вставьте ссылку: https://salutejazz.ru..." style="flex-grow: 1; min-width: 220px; padding: 12px 15px; border-radius: 8px; border: 2px solid #3b82f6; background: #0f172a; color: #ffffff; font-size: 15px; outline: none; box-sizing: border-box;">');
+        html.push('    <button type="button" onclick="broadcastStreamUrl()" style="padding: 12px 20px; background: #22c55e; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 14px;">🚀 ЗАПУСТИТЬ У ВСЕХ</button>');
+        html.push('    <button type="button" onclick="stopBroadcastStream()" style="padding: 12px 16px; background: #f59e0b; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 14px;">⏹ СТОП</button>');
+        html.push('  </div>');
+        html.push('  <button type="button" onclick="closeStream()" style="padding: 12px 20px; background: #ef4444; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 14px;">⬅️ НАЗАД В ЖУРНАЛ</button>');
         html.push('</div>');
 
-        // Плашка быстрого входа для SaluteJazz (открывает установленное приложение СберДжаз напрямую)
-        if (isSalute) {
-            html.push('<div id="salute-helper-bar" style="width: 100%; background: #1e3a8a; padding: 8px 16px; display: flex; align-items: center; justify-content: center; gap: 12px; flex-wrap: wrap; box-sizing: border-box; z-index: 10;">');
-            html.push('  <span style="font-size: 13px; color: #e2e8f0;">Конференция SaluteJazz запущена:</span>');
-            html.push('  <button type="button" onclick="openInSaluteApp()" style="padding: 6px 14px; background: #22c55e; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 13px;">📱 Запустить в приложении SaluteJazz</button>');
-            html.push('</div>');
+        html.push('<div style="flex-grow: 1; width: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 20px; box-sizing: border-box;">');
+        if (activeUrl) {
+            html.push('  <div style="background: #1e293b; border: 3px solid #6366f1; border-radius: 16px; padding: 35px 25px; text-align: center; max-width: 500px; width: 100%;">');
+            html.push('    <div style="font-size: 55px; margin-bottom: 15px;">🎥</div>');
+            html.push('    <h2 style="margin: 0 0 15px 0; color: #ffffff;">Стрим активен!</h2>');
+            html.push('    <button type="button" onclick="openStreamExternal()" style="width: 100%; padding: 18px 24px; background: #6366f1; color: white; border: none; border-radius: 12px; font-weight: bold; cursor: pointer; font-size: 18px;">🚀 НА ВЕСЬ ЭКРАН</button>');
+            html.push('  </div>');
+        } else {
+            html.push('  <div style="text-align: center; padding: 20px; max-width: 500px;">');
+            html.push('    <div style="font-size: 50px; margin-bottom: 15px;">🎥</div>');
+            html.push('    <h3 style="margin: 0 0 10px 0; color: #f1f5f9;">Вставьте ссылку в поле сверху</h3>');
+            html.push('    <p style="color: #94a3b8; font-size: 14px;">Нажмите <b>«🚀 ЗАПУСТИТЬ У ВСЕХ»</b> — окно стрима развернётся на весь экран.</p>');
+            html.push('  </div>');
         }
-
-        html.push('<div style="flex-grow: 1; width: 100%; position: relative; background: #000000; display: flex; flex-direction: column; justify-content: center; align-items: center;">');
-        html.push('  <div id="stream-placeholder" style="text-align: center; padding: 20px; max-width: 500px; display: ' + placeholderDisplay + ';">');
-        html.push('    <div style="font-size: 50px; margin-bottom: 15px;">🎥</div>');
-        html.push('    <h3 style="margin: 0 0 10px 0; color: #f1f5f9;">Ожидание запуска видеострима...</h3>');
-        html.push('    <p style="color: #94a3b8; font-size: 14px; line-height: 1.5;">Когда администратор нажмёт <b>«📡 ЗАПУСТИТЬ У ВСЕХ»</b> или <b>«📹 ВСТРОЕННЫЙ СТРИМ»</b>, видео автоматически включится прямо в этом окне.</p>');
-        html.push('  </div>');
-        html.push('  <iframe id="stream-iframe" src="' + iframeSrc + '" allow="camera *; microphone *; fullscreen *; display-capture *; autoplay *; speaker-selection *" allowfullscreen style="display: ' + iframeDisplay + '; width: 100%; height: 100%; border: none; position: absolute; top: 0; left: 0;"></iframe>');
         html.push('</div>');
 
         win.innerHTML = html.join('');
-    }
-
-    function getIframeLoadUrl(url) {
-        if (!url) return '';
-        if (url.toLowerCase().indexOf('salutejazz.ru') !== -1) {
-            return '/proxy?url=' + encodeURIComponent(url);
-        }
-        return url;
-    }
-
-    function openInSaluteApp() {
-        var url = window.currentSharedStreamUrl;
-        if (!url) return;
-        var isAndroid = /Android/i.test(navigator.userAgent);
-        if (isAndroid) {
-            var cleanUrl = url.replace(/^https?:\/\//i, '');
-            window.location.href = 'intent://' + cleanUrl + '#Intent;scheme=https;package=ru.beru.jazz;S.browser_fallback_url=' + encodeURIComponent(url) + ';end';
-        } else {
-            window.location.href = url;
-        }
     }
 
     function closeStream() {
@@ -1313,46 +1273,43 @@
         if (win) win.style.display = 'none';
     }
 
-    function applyStreamUrlToIframe(url) {
-        openStream(url);
+    function openStreamExternal() {
+        var input = document.getElementById('stream-url-input');
+        var url = (input ? input.value.trim() : '') || window.currentSharedStreamUrl;
+        if (!url) return alert("Сначала вставьте ссылку в поле ввода!");
+        openAppPopupWindow(url);
     }
 
     function broadcastStreamUrl() {
         var input = document.getElementById('stream-url-input');
         var url = input ? input.value.trim() : '';
-        if (!url) return alert("Вставьте ссылку или нажмите синюю кнопку «ВСТРОЕННЫЙ СТРИМ»!");
+        if (!url) return alert("Сначала вставьте ссылку в поле ввода!");
         if (url.indexOf('http://') !== 0 && url.indexOf('https://') !== 0) {
             url = 'https://' + url;
         }
 
         window.currentSharedStreamUrl = url;
         localStorage.setItem('msb_stream_url', url);
-        openStream(url);
 
         sendStreamWsMessage({
             type: 'set_stream',
             url: url,
             forceOpen: true
         });
-    }
 
-    function startBuiltInRoom() {
-        var roomUrl = 'https://ffmuc.net';
-        var input = document.getElementById('stream-url-input');
-        if (input) input.value = roomUrl;
-        broadcastStreamUrl();
+        openStream(url);
+        openAppPopupWindow(url);
     }
 
     function stopBroadcastStream() {
         window.currentSharedStreamUrl = '';
         localStorage.removeItem('msb_stream_url');
-        openStream('');
-
         sendStreamWsMessage({
             type: 'set_stream',
             url: '',
             forceOpen: false
         });
+        openStream('');
     }
 
     document.addEventListener('click', function(e) {
@@ -1362,6 +1319,5 @@
         }
     });
 </script>
-
 </body>
 </html>
