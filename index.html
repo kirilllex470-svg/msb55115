@@ -13,137 +13,40 @@
     <link rel="apple-touch-icon" href="/icon-192.png">
     <title>МСБ55115</title>
     <style>
-        :root { 
-            --bg: #0f172a; 
-            --panel: #1e293b; 
-            --accent: #3b82f6; 
-            --text: #f1f5f9; 
-            --border: #334155; 
-            --danger: #ef4444; 
-            --input-bg: #0f172a;
-            --table-header: #1e293b;
-            --notif-bg-wrapper: rgba(30, 41, 59, 0.7);
-        }
-
-        body.light-theme {
-            --bg: #f1f5f9;
-            --panel: #ffffff;
-            --accent: #2563eb;
-            --text: #0f172a;
-            --border: #cbd5e1;
-            --danger: #dc2626;
-            --input-bg: #ffffff;
-            --table-header: #e2e8f0;
-            --notif-bg-wrapper: rgba(255, 255, 255, 0.95);
-        }
-
-        body { 
-            background: var(--bg); 
-            color: var(--text); 
-            font-family: 'Segoe UI', monospace; 
-            margin: 0; 
-            padding: 20px; 
-            display: flex; 
-            flex-direction: column; 
-            align-items: center; 
-            box-sizing: border-box; 
-            transition: background 0.2s, color 0.2s;
-        }
-
-        #login-overlay { 
-            position: fixed; 
-            top: 0; 
-            left: 0; 
-            width: 100%; 
-            height: 100%; 
-            background: rgba(15, 23, 42, 0.98); 
-            z-index: 100; 
-            display: flex; 
-            flex-direction: column; 
-            justify-content: center; 
-            align-items: center; 
-            padding: 15px; 
-            box-sizing: border-box; 
-        }
-
-        .login-box { 
-            background: var(--panel); 
-            padding: 40px; 
-            border-radius: 16px; 
-            border: 1px solid var(--border); 
-            width: 100%; 
-            max-width: 320px; 
-            text-align: center; 
-            box-shadow: 0 20px 60px rgba(0,0,0,0.7); 
-            box-sizing: border-box; 
-        }
-        .login-box select, .login-box input { 
-            width: 100%; 
-            padding: 14px; 
-            margin-bottom: 20px; 
-            background: var(--input-bg); 
-            border: 1px solid var(--border); 
-            color: var(--text); 
-            border-radius: 8px; 
-            font-size: 16px; 
-            outline: none; 
-            box-sizing: border-box; 
-        }
-        .login-box button { 
-            width: 100%; 
-            padding: 14px; 
-            background: var(--accent); 
-            color: white; 
-            border: none; 
-            border-radius: 8px; 
-            font-size: 16px; 
-            font-weight: bold; 
-            cursor: pointer; 
-            transition: 0.2s; 
-        }
+        :root { --bg: #0f172a; --panel: #1e293b; --accent: #3b82f6; --text: #f1f5f9; --border: #334155; --danger: #ef4444; }
+        body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', monospace; margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; box-sizing: border-box; }
+        #login-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.98); z-index: 100; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 15px; box-sizing: border-box; }
+        .login-box { background: var(--panel); padding: 40px; border-radius: 16px; border: 1px solid var(--border); width: 100%; max-width: 320px; text-align: center; box-shadow: 0 20px 60px rgba(0,0,0,0.7); box-sizing: border-box; }
+        .login-box select, .login-box input { width: 100%; padding: 14px; margin-bottom: 20px; background: #0f172a; border: 1px solid var(--border); color: white; border-radius: 8px; font-size: 16px; outline: none; box-sizing: border-box; }
+        .login-box button { width: 100%; padding: 14px; background: var(--accent); color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; transition: 0.2s; }
         .login-box button:hover { background: #2563eb; }
         .viewer-btn { background: transparent !important; border: 1px solid #475569 !important; color: #94a3b8 !important; margin-top: 15px; }
         .viewer-btn:hover { background: #1e293b !important; color: white !important; }
         .install-btn { display: none; width: 100%; background: #10b981 !important; color: white !important; border: none !important; margin-top: 15px; padding: 12px 15px; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 14px; box-sizing: border-box; }
         .error-msg { color: var(--danger); font-size: 14px; margin-top: 10px; display: none; }
-        
-        .input-panel { background: var(--panel); padding: 25px; border-radius: 12px; border: 1px solid var(--border); width: 100%; max-width: 1400px; margin-bottom: 30px; display: none; box-sizing: border-box; }
+        .input-panel { background: var(--panel); padding: 25px; border-radius: 12px; border: 1px solid var(--border); width: 100%; max-width: 1200px; margin-bottom: 30px; display: none; box-sizing: border-box; }
         .inputs-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 15px; margin-bottom: 20px; }
         .field-group label { display: block; font-size: 13px; color: #94a3b8; margin-bottom: 5px; font-weight: bold; }
-        .field-group select, .field-group input { width: 100%; padding: 12px; background: var(--input-bg); border: 1px solid var(--border); color: var(--text); border-radius: 6px; font-size: 16px; outline: none; box-sizing: border-box; }
-        
+        .field-group select, .field-group input { width: 100%; padding: 12px; background: #0f172a; border: 1px solid var(--border); color: white; border-radius: 6px; font-size: 16px; outline: none; box-sizing: border-box; }
         .send-btn { width: 100%; padding: 15px; background: #22c55e; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; }
-        .stream-btn { width: 100%; padding: 15px; background: #6366f1; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; margin-top: 15px; text-align: center; }
-        
         #admin-zone { display: none; margin-top: 30px; padding: 20px; border: 2px solid var(--danger); border-radius: 10px; background: rgba(239, 68, 68, 0.1); }
         .admin-controls { display: flex; gap: 10px; }
-        .admin-controls select { width: 200px; padding: 12px; border-radius: 6px; border: 1px solid var(--border); font-size: 16px; background: var(--input-bg); color: var(--text); }
-        .admin-controls input { flex-grow: 1; padding: 12px; border-radius: 6px; border: 1px solid var(--border); font-size: 16px; background: var(--input-bg); color: var(--text); }
+        .admin-controls select { width: 200px; padding: 12px; border-radius: 6px; border: none; font-size: 16px; }
+        .admin-controls input { flex-grow: 1; padding: 12px; border-radius: 6px; border: none; font-size: 16px; }
         .admin-controls button { padding: 12px 20px; background: var(--danger); color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; }
-        #clear-history-box { display: none; margin-top: 15px; padding-top: 15px; border-top: 1px solid rgba(239, 68, 68, 0.3); }
         #alert-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(185, 28, 28, 0.98); z-index: 99999; flex-direction: column; justify-content: center; align-items: center; text-align: center; padding: 15px; box-sizing: border-box; }
         .alert-content { background: white; color: #b91c1c; padding: 30px; border-radius: 20px; width: 100%; max-width: 600px; box-shadow: 0 0 50px rgba(0,0,0,0.5); animation: shake 0.5s infinite; box-sizing: border-box; }
         @keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-5px); } 75% { transform: translateX(5px); } }
         .alert-btn { margin-top: 20px; width: 100%; padding: 18px; font-size: 20px; background: #b91c1c; color: white; border: none; border-radius: 10px; cursor: pointer; font-weight: bold; }
-        
-        .history-container, .notif-container { width: 100%; max-width: 1400px; overflow-x: auto; -webkit-overflow-scrolling: touch; border-radius: 8px; margin-bottom: 25px; }
-        .notif-box-wrapper { width: 100%; max-width: 1400px; background: var(--notif-bg-wrapper); border: 2px solid var(--accent); border-radius: 12px; padding: 20px; box-sizing: border-box; margin-bottom: 25px; }
-        
-        table { width: 100%; border-collapse: collapse; min-width: 850px; background: var(--panel); }
+        .history-container { width: 100%; max-width: 1400px; overflow-x: auto; -webkit-overflow-scrolling: touch; border-radius: 8px; }
+        table { width: 100%; border-collapse: collapse; min-width: 850px; }
         th, td { border: 1px solid var(--border); padding: 10px; text-align: center; font-size: 14px; }
-        th { background: var(--table-header); color: #94a3b8; }
+        th { background: #1e293b; color: #94a3b8; }
         .new-row { animation: fadeIn 0.5s ease; }
-        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
         .time-cell { color: #facc15; font-family: monospace; }
         .user-cell { font-weight: bold; }
-        
         .ack-row td { background: rgba(34, 197, 94, 0.1); color: #86efac; font-style: italic; }
-        body.light-theme .ack-row td { background: rgba(34, 197, 94, 0.15); color: #16a34a; }
         .alert-row td { background: rgba(239, 68, 68, 0.15); color: #fca5a5; font-weight: bold; }
-        body.light-theme .alert-row td { background: rgba(239, 68, 68, 0.08); color: #b91c1c; }
-        
-        #stream-window { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000000; z-index: 99999; color: white; flex-direction: column; justify-content: center; align-items: center; text-align: center; padding: 20px; box-sizing: border-box; }
-        
         @media (max-width: 768px) {
             body { padding: 10px; }
             .login-box { padding: 25px 20px; }
@@ -158,11 +61,6 @@
     </style>
 </head>
 <body>
-    <div id="stream-window">
-        <h1 style="font-size: 40px; margin: 0 0 10px 0;">📡 Видеострим МСБ55115</h1>
-        <p style="color: #94a3b8; font-size: 18px; margin-bottom: 30px;">Экран трансляции пуст. Ожидание входящего потока данных...</p>
-        <button type="button" onclick="closeStream()" style="padding: 15px 35px; background: var(--danger); color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 16px;">ВЕРНУТЬСЯ В ЖУРНАЛ</button>
-    </div>
     <div id="alert-modal">
         <div class="alert-content">
             <h1 style="font-size: 40px; margin: 0;">🛑 СООБЩЕНИЕ!</h1>
@@ -184,20 +82,16 @@
             <div id="login-error" style="color: #ef4444; font-size: 14px; margin-top: 10px; display: none;">❌ Неверный пароль</div>
         </div>
     </div>
-
     <div class="input-panel" id="input-panel">
         <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:15px;">
             <h3 style="margin:0;">📝 ПОДРАЗДЕЛЕНИЕ: <span id="my-name"></span></h3>
             <div style="display:flex; gap:10px;">
-                <button type="button" class="theme-btn" onclick="toggleTheme()">🌓 Смена темы</button>
                 <button type="button" class="install-btn pwa-install-btn" style="width:auto; margin-top:0; padding:8px 15px;" onclick="installPWA()">📲 Установить</button>
                 <button type="button" onclick="logoutUser()" style="background:#334155; color:white; border:none; padding:8px 15px; border-radius:6px; cursor:pointer; font-weight:bold;">Выход</button>
             </div>
         </div>
         <div class="inputs-grid" id="dynamic-inputs"></div>
         <button type="button" class="send-btn" onclick="submitRow()">📤 ЗАПИСАТЬ В ЖУРНАЛ</button>
-        <button type="button" class="stream-btn" onclick="openStream()">📺 ВИДЕОСТРИМ МСБ55115</button>
-        
         <div id="admin-zone">
             <h3 style="color: #ef4444; margin-top: 0;">⚡ УПРАВЛЕНИЕ И СВЯЗЬ</h3>
             <div style="color: #fca5a5; margin-bottom: 10px; font-size: 14px;">Отправить уведомление подразделению:</div>
@@ -211,24 +105,6 @@
             </div>
         </div>
     </div>
-
-    <div class="notif-box-wrapper" id="notif-box-wrapper">
-        <h3 style="margin: 0 0 15px 0; color: #ef4444; font-size: 16px;">🚨 ОКНО ОПЕРАТИВНЫХ УВЕДОМЛЕНИЙ (КТО КОМУ ПИШЕТ)</h3>
-        <div class="notif-container">
-            <table>
-                <thead>
-                    <tr>
-                        <th style="width: 130px;">🕒 Время</th>
-                        <th style="width: 130px;">👤 Отправитель</th>
-                        <th style="width: 130px;">🎯 Получатель</th>
-                        <th>💬 Текст сообщения / Статус ознакомления</th>
-                    </tr>
-                </thead>
-                <tbody id="notif-table-body"></tbody>
-            </table>
-        </div>
-    </div>
-
     <h3 style="color:#94a3b8; width: 100%; max-width: 1400px; margin: 10px 0;">📊 Журнал событий</h3>
     <div class="history-container">
         <table>
@@ -241,7 +117,6 @@
             <tbody id="table-body"></tbody>
         </table>
     </div>
-
 <script>
     const USERS_CONFIG = [
         { name: "ШР", pass: "551151111", color: "#3b82f6" },
@@ -251,22 +126,23 @@
         { name: "АДМИН", pass: "5555", color: "#ef4444" }
     ];
     const ADMIN_NAME = "АДМИН";
+
     const COLUMNS_CONFIG = [
         { label: "ГРУППА", options: ["1", "2", "3", "4", "5"] },
         { label: "ИСХОДНИКИ", options: [
-            "НАЧАЛИ ДВИЖЕНИЕ", "ЖДУТ", "ИДУТ", "П П О",
-            "П И П", "З Р Ф Г",
-            "З П Р Г", "В Р А",
-            "В Р Ш", "МЕДИЦИНА",
-            "СВЯЗЬ", "ОБОРОНА", "Р В О",
-            "ШТУРМ", "РВБС"
+            "НАЧАЛИ ДВИЖЕНИЕ", "ЖДУТ", "ИДУТ", "ПЕРЕСЕКАЮТ ОТКРЫТКУ",
+            "ПРОШЛИ ИСХОДНЫЙ ПУНКТ", "ЗАНЯТИЕ Р-НА ФОР-Я ГРУПП",
+            "ЗАНЯТИЕ ПЕРЕФОР-Я Р-НА ГРУПП", "ВЫХОД НА РУБЕЖ АТАКИ",
+            "ВЫХОД НА РУБЕЖ ШТУРМА", "ЗАНИМАЮТСЯ МЕДИЦИНОЙ",
+            "ЗАНИМАЮТСЯ СВЯЗЬЮ", "ОБОРОНА", "РАБОТАЮТ В ОБОРОНЕ",
+            "ШТУРМУЮТ", "РВБС"
         ]},
         { label: "ЦВЕТ ТОЧКИ", options: [
             "ФИОЛЕТОВЫЙ", "БИРЮЗОВАЯ", "БИРЮЗОВАЯ-А", "СЕРАЯ", "ЗЕЛЕНАЯ",
             "СИНИЯ", "ЖЕЛТАЯ", "ОРАНЖЕВАЯ", "КРАСНАЯ", "РОЗОВАЯ",
             "РОЗОВАЯ-А", "БЕЖЕВАЯ", "КОРИЧНЕВАЯ", "ЧЕРНАЯ", "БОРДОВАЯ"
         ]},
-        { label: "НОМЕР ТОЧКИ", options: new Array(), allowSlashFraction: true },
+        { label: "НОМЕР ТОЧКИ", options: new Array(), digitsOnly: true },
         { label: "ЛЕСОПОЛОСА", options: [
             "ФАКС", "ЗУБР1", "ПОЭТ", "СУДЬЯ", "СОР4", "ЗАМЕНА", "КРАСКА",
             "МАСТАК1", "ВОЛК3", "АНГЕЛ", "ВАЛИК1", "ЛЕЖАК", "ЛОТ ", "ПРИНТ7",
@@ -303,26 +179,6 @@
     let publicVapidKey = null;
     let deferredPrompt = null;
 
-    function toggleTheme() {
-        const isLight = document.body.classList.toggle('light-theme');
-        localStorage.setItem('journal_theme', isLight ? 'light' : 'dark');
-    }
-
-    function initTheme() {
-        const saved = localStorage.getItem('journal_theme');
-        if (saved === 'light') {
-            document.body.classList.add('light-theme');
-        }
-    }
-
-    function openStream() {
-        document.getElementById('stream-window').style.display = 'flex';
-    }
-
-    function closeStream() {
-        document.getElementById('stream-window').style.display = 'none';
-    }
-
     window.addEventListener('beforeinstallprompt', function(e) {
         e.preventDefault();
         deferredPrompt = e;
@@ -347,6 +203,7 @@
             btn.style.display = 'none';
         });
     }
+
     function urlBase64ToUint8Array(base64String) {
         const padding = '='.repeat((4 - base64String.length % 4) % 4);
         const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
@@ -381,7 +238,6 @@
             }
         } catch (e) { console.error('Push error:', e); }
     }
-
     function sendLocalNotification(target, text, sender) {
         const fromWho = sender || 'АДМИН';
         const title = '🛑 ТРЕВОГА ДЛЯ [' + target + ']!';
@@ -391,7 +247,7 @@
             navigator.serviceWorker.ready.then(function(reg) {
                 reg.showNotification(title, {
                     body: body,
-                    vibrate:,
+                    vibrate: Array.of(800, 200, 800, 200, 800, 200, 1000),
                     silent: false,
                     requireInteraction: true,
                     renotify: true,
@@ -462,7 +318,7 @@
 
     function playBeep() {
         try {
-            if (navigator.vibrate) navigator.vibrate([600, 200, 600]);
+            if (navigator.vibrate) navigator.vibrate(Array.of(600, 200, 600));
             if (sirenAudio) sirenAudio.play().catch(function() {});
             
             if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -487,7 +343,6 @@
             const msg = JSON.parse(event.data);
             if (msg.type === 'init') {
                 document.getElementById('table-body').innerHTML = '';
-                document.getElementById('notif-table-body').innerHTML = '';
                 msg.data.forEach(appendRow);
                 if (msg.vapidPublicKey) {
                     publicVapidKey = msg.vapidPublicKey;
@@ -501,7 +356,6 @@
             if (msg.type === 'new_row') appendRow(msg.row);
             if (msg.type === 'history_cleared') {
                 document.getElementById('table-body').innerHTML = '';
-                document.getElementById('notif-table-body').innerHTML = '';
             }
             if (msg.type === 'admin_alert') {
                 pendingAlerts[msg.target] = {
@@ -526,7 +380,6 @@
             connectWS();
         }
     }, 4000);
-
     function populateTargetSelect() {
         const adminSelect = document.getElementById('admin-target');
         adminSelect.innerHTML = '';
@@ -561,8 +414,8 @@
             document.getElementById('clear-history-box').style.display = 'none';
         }
     }
+
     function initApp() {
-        initTheme();
         document.getElementById('login-error').style.display = 'none';
 
         if ('serviceWorker' in navigator) {
@@ -602,8 +455,8 @@
             if (col.options && col.options.length > 0) {
                 let opts = col.options.map(function(o) { return '<option>' + o + '</option>'; }).join('');
                 inputHtml = '<select id="in-' + index + '"><option value="" disabled selected>-</option>' + opts + '</select>';
-            } else if (col.allowSlashFraction) {
-                inputHtml = '<input type="text" id="in-' + index + '" placeholder="Цифры, дробь, /..." oninput="this.value = this.value.replace(/[^0-9\\/\\\\.,-]/g, \'\')">';
+            } else if (col.digitsOnly) {
+                inputHtml = '<input type="text" inputmode="numeric" pattern="[0-9]*" id="in-' + index + '" placeholder="Только цифры..." oninput="this.value = this.value.replace(/[^0-9]/g, \'\')">';
             } else {
                 inputHtml = '<input type="text" id="in-' + index + '" placeholder="...">';
             }
@@ -644,7 +497,6 @@
             document.getElementById('login-error').style.display = 'block';
         }
     }
-
     function logoutUser() {
         localStorage.removeItem('journal_user');
         localStorage.removeItem('journal_color');
@@ -676,13 +528,13 @@
             text: msg 
         }));
 
-        alert("Уведомление отправлено и записано в отдельное окно!");
+        alert("Уведомление отправлено и записано в журнал!");
         document.getElementById('admin-msg').value = '';
     }
 
     function clearHistoryAdmin() {
         if (currentUser !== ADMIN_NAME) return;
-        if (confirm("⚠️ Вы уверены, что хотите ПОЛНОСТЬЮ очистить все журналы и уведомления у всех?")) {
+        if (confirm("⚠️ Вы уверены, что хотите ПОЛНОСТЬЮ очистить весь журнал событий у всех участников?")) {
             ws.send(JSON.stringify({ type: 'clear_history' }));
         }
     }
@@ -797,8 +649,8 @@
         let isEmpty = true;
         for (let i = 0; i < COLUMNS_CONFIG.length; i++) {
             let val = document.getElementById('in-' + i).value;
-            if (COLUMNS_CONFIG.at(i).allowSlashFraction && val) {
-                val = val.replace(/[^0-9\\/\\\\.,-]/g, '');
+            if (COLUMNS_CONFIG.at(i).digitsOnly && val) {
+                val = val.replace(/[^0-9]/g, '');
             }
             values.push(val);
             if(val) isEmpty = false;
@@ -818,40 +670,17 @@
     }
 
     function appendRow(row) {
-        if (row.values && row.values.at(0)) {
-            const firstCol = String(row.values.at(0));
-            const isAck = firstCol.indexOf("ОЗНАКОМЛЕН") !== -1;
-            const isNotif = firstCol.indexOf("УВЕДОМЛЕНИЕ") !== -1;
-
-            if (isAck || isNotif) {
-                const notifBody = document.getElementById('notif-table-body');
-                const tr = document.createElement('tr');
-                tr.className = isNotif ? 'alert-row new-row' : 'ack-row new-row';
-
-                let sender = row.user;
-                let target = "ВСЕМ";
-                let text = "-";
-
-                if (isNotif) {
-                    target = String(row.values.at(1) || '').replace("КОМУ: ", "");
-                    text = String(row.values.at(row.values.length - 1) || '').replace("Текст: ", "");
-                } else {
-                    sender = row.user;
-                    target = String(row.values.at(1) || '').replace("ОТ: ", "");
-                    text = String(row.values.at(row.values.length - 1) || '').replace("Уведомление: ", "");
-                }
-
-                tr.innerHTML = '<td class="time-cell">' + row.time + '</td><td style="color:' + row.color + '; font-weight:bold;">' + sender + '</td><td style="font-weight:bold; color:#ef4444;">' + target + '</td><td style="text-align:left; padding-left:15px;">' + text + '</td>';
-                notifBody.appendChild(tr);
-                requestAnimationFrame(function() { tr.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); });
-                return;
-            }
-        }
-
         const tbody = document.getElementById('table-body');
         const tr = document.createElement('tr');
         tr.className = 'new-row';
-        
+        if (row.values && row.values.at(0)) {
+            const firstCol = String(row.values.at(0));
+            if (firstCol.indexOf("ОЗНАКОМЛЕН") !== -1) {
+                tr.classList.add('ack-row');
+            } else if (firstCol.indexOf("УВЕДОМЛЕНИЕ") !== -1) {
+                tr.classList.add('alert-row');
+            }
+        }
         let html = '<td class="time-cell">' + row.time + '</td><td class="user-cell" style="color: ' + row.color + '">' + row.user + '</td>';
         
         for (let i = 0; i < COLUMNS_CONFIG.length; i++) {
