@@ -1162,5 +1162,173 @@
         requestAnimationFrame(function() { tr.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); });
     }
 </script>
+   <script>
+    window.currentSharedStreamUrl = localStorage.getItem('msb_stream_url') || '';
+
+    function openStream(autoUrl) {
+        var win = document.getElementById('stream-window');
+        if (!win) {
+            win = document.createElement('div');
+            win.id = 'stream-window';
+            document.body.appendChild(win);
+        }
+
+        win.style.cssText = 'display: flex !important; position: fixed !important; top: 0 !important; left: 0 !important; width: 100vw !important; height: 100vh !important; background: #0f172a !important; z-index: 999999 !important; color: white !important; flex-direction: column !important; box-sizing: border-box !important;';
+
+        var activeUrl = (autoUrl !== undefined) ? autoUrl : window.currentSharedStreamUrl;
+        var placeholderDisplay = activeUrl ? 'none' : 'block';
+        var iframeDisplay = activeUrl ? 'block' : 'none';
+
+        var html = [];
+        html.push('<div style="width: 100%; background: #1e293b; padding: 12px 20px; border-bottom: 2px solid #3b82f6; display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: space-between; box-sizing: border-box; z-index: 10;">');
+        html.push('  <div style="font-size: 18px; font-weight: bold; color: #f1f5f9;">📡 Видеострим МСБ55115</div>');
+        html.push('  <div style="display: flex; flex-grow: 1; max-width: 780px; gap: 8px; flex-wrap: wrap;">');
+        html.push('    <input type="text" id="stream-url-input" value="' + activeUrl + '" placeholder="Админ: вставьте ссылку SaluteJazz..." style="flex-grow: 1; min-width: 200px; padding: 10px 14px; border-radius: 8px; border: 2px solid #3b82f6; background: #0f172a; color: #ffffff; font-size: 14px; outline: none; box-sizing: border-box;">');
+        html.push('    <button type="button" onclick="broadcastStreamUrl()" style="padding: 10px 16px; background: #22c55e; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 13px;">📡 ЗАПУСТИТЬ У ВСЕХ</button>');
+        html.push('    <button type="button" onclick="stopBroadcastStream()" style="padding: 10px 12px; background: #f59e0b; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 13px;">⏹ СТОП</button>');
+        html.push('    <button type="button" onclick="openStreamExternal()" style="padding: 10px 14px; background: #6366f1; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 13px;">🚀 НА ВЕСЬ ЭКРАН</button>');
+        html.push('  </div>');
+        html.push('  <button type="button" onclick="closeStream()" style="padding: 10px 16px; background: #ef4444; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 13px;">⬅️ НАЗАД В ЖУРНАЛ</button>');
+        html.push('</div>');
+
+        html.push('<div style="flex-grow: 1; width: 100%; position: relative; background: #000000; display: flex; flex-direction: column; justify-content: center; align-items: center;">');
+        html.push('  <div id="stream-placeholder" style="text-align: center; padding: 20px; max-width: 500px; display: ' + placeholderDisplay + ';">');
+        html.push('    <div style="font-size: 50px; margin-bottom: 15px;">🎥</div>');
+        html.push('    <h3 style="margin: 0 0 10px 0; color: #f1f5f9;">Ожидание запуска трансляции...</h3>');
+        html.push('    <p style="color: #94a3b8; font-size: 14px; line-height: 1.5;">Когда администратор вставит ссылку и нажмёт <b>«📡 ЗАПУСТИТЬ У ВСЕХ»</b>, видеострим откроется автоматически.<br><i>Если сайт блокирует камеру или звук в окне, нажмите синюю кнопку <b>«🚀 НА ВЕСЬ ЭКРАН»</b> сверху.</i></p>');
+        html.push('  </div>');
+        html.push('  <iframe id="stream-iframe" src="' + activeUrl + '" allow="camera *; microphone *; fullscreen *; display-capture *; autoplay *" allowfullscreen style="display: ' + iframeDisplay + '; width: 100%; height: 100%; border: none; position: absolute; top: 0; left: 0;"></iframe>');
+        html.push('</div>');
+
+        win.innerHTML = html.join('');
+        sendStreamWsMessage({ type: 'get_stream' });
+    }
+
+    function closeStream() {
+        var win = document.getElementById('stream-window');
+        if (win) win.style.display = 'none';
+    }
+    function broadcastStreamUrl() {
+        var input = document.getElementById('stream-url-input');
+        var url = input ? input.value.trim() : '';
+        if (!url) return alert("Сначала вставьте ссылку в поле ввода!");
+        if (url.indexOf('http://') !== 0 && url.indexOf('https://') !== 0) {
+            url = 'https://' + url;
+        }
+
+        window.currentSharedStreamUrl = url;
+        localStorage.setItem('msb_stream_url', url);
+        applyStreamUrlToIframe(url);
+
+        sendStreamWsMessage({
+            type: 'set_stream',
+            url: url,
+            forceOpen: true
+        });
+    }
+
+    function stopBroadcastStream() {
+        window.currentSharedStreamUrl = '';
+        localStorage.removeItem('msb_stream_url');
+        var input = document.getElementById('stream-url-input');
+        if (input) input.value = '';
+        applyStreamUrlToIframe('');
+
+        sendStreamWsMessage({
+            type: 'set_stream',
+            url: '',
+            forceOpen: false
+        });
+    }
+
+    function applyStreamUrlToIframe(url) {
+        var placeholder = document.getElementById('stream-placeholder');
+        var iframe = document.getElementById('stream-iframe');
+        var input = document.getElementById('stream-url-input');
+        if (input) input.value = url;
+
+        if (url) {
+            if (placeholder) placeholder.style.display = 'none';
+            if (iframe) {
+                iframe.style.display = 'block';
+                if (iframe.src !== url) iframe.src = url;
+            }
+        } else {
+            if (placeholder) placeholder.style.display = 'block';
+            if (iframe) {
+                iframe.style.display = 'none';
+                iframe.src = '';
+            }
+        }
+    }
+
+    function openStreamExternal() {
+        var input = document.getElementById('stream-url-input');
+        var url = (input ? input.value.trim() : '') || window.currentSharedStreamUrl;
+        if (!url) return alert("Трансляция еще не запущена!");
+        if (url.indexOf('http://') !== 0 && url.indexOf('https://') !== 0) {
+            url = 'https://' + url;
+        }
+        window.open(url, 'SaluteJazzStream', 'width=' + screen.availWidth + ',height=' + screen.availHeight + ',top=0,left=0');
+    }
+
+    function getActiveWebSocket() {
+        if (window.ws) return window.ws;
+        if (typeof ws !== 'undefined') return ws;
+        if (window.socket) return window.socket;
+        return null;
+    }
+
+    function sendStreamWsMessage(data) {
+        var sock = getActiveWebSocket();
+        if (sock && sock.readyState === 1) {
+            sock.send(JSON.stringify(data));
+        }
+    }
+
+    function attachStreamWsListener() {
+        var sock = getActiveWebSocket();
+        if (sock && !sock._streamListenerAdded) {
+            sock._streamListenerAdded = true;
+            sock.addEventListener('message', function(event) {
+                try {
+                    var msg = JSON.parse(event.data);
+                    if (msg.type === 'stream_url') {
+                        window.currentSharedStreamUrl = msg.url || '';
+                        if (msg.url) {
+                            localStorage.setItem('msb_stream_url', msg.url);
+                        } else {
+                            localStorage.removeItem('msb_stream_url');
+                        }
+
+                        var win = document.getElementById('stream-window');
+                        if (msg.forceOpen && msg.url) {
+                            openStream(msg.url);
+                        } else if (win && win.style.display !== 'none') {
+                            applyStreamUrlToIframe(msg.url);
+                        }
+                    }
+                } catch (e) {}
+            });
+
+            if (sock.readyState === 1) {
+                sock.send(JSON.stringify({ type: 'get_stream' }));
+            } else {
+                sock.addEventListener('open', function() {
+                    sock.send(JSON.stringify({ type: 'get_stream' }));
+                });
+            }
+        }
+    }
+
+    setInterval(attachStreamWsListener, 1000);
+
+    document.addEventListener('click', function(e) {
+        var btn = e.target.closest('button, a, div');
+        if (btn && btn.innerText && btn.innerText.toLowerCase().indexOf('видеострим') !== -1 && (!btn.id || btn.id.indexOf('stream') === -1)) {
+            openStream();
+        }
+    });
+</script> 
 </body>
 </html>
