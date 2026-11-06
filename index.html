@@ -585,19 +585,42 @@
 
     function openStream() {
         document.getElementById('stream-window').style.display = 'flex';
+        const savedUrl = localStorage.getItem('msb_stream_url');
+        if (savedUrl && !document.getElementById('stream-url-input').value) {
+            document.getElementById('stream-url-input').value = savedUrl;
+        }
     }
 
     function closeStream() {
         document.getElementById('stream-window').style.display = 'none';
+        // Останавливаем видео/звук при выходе в журнал
+        const iframe = document.getElementById('stream-iframe');
+        if (iframe) iframe.src = '';
+        document.getElementById('stream-iframe').style.display = 'none';
+        document.getElementById('stream-placeholder').style.display = 'block';
     }
 
-    window.addEventListener('beforeinstallprompt', function(e) {
-        e.preventDefault();
-        deferredPrompt = e;
-        document.querySelectorAll('.pwa-install-btn').forEach(function(btn) {
-            btn.style.display = 'inline-block';
-        });
-    });
+    function launchStreamUrl() {
+        let url = document.getElementById('stream-url-input').value.trim();
+        if (!url) return alert("Пожалуйста, вставьте ссылку в поле!");
+        if (!/^https?:\/\//i.test(url)) {
+            url = 'https://' + url;
+        }
+        localStorage.setItem('msb_stream_url', url);
+        document.getElementById('stream-placeholder').style.display = 'none';
+        const iframe = document.getElementById('stream-iframe');
+        iframe.style.display = 'block';
+        iframe.src = url;
+    }
+
+    function openStreamExternal() {
+        let url = document.getElementById('stream-url-input').value.trim();
+        if (!url) return alert("Сначала вставьте ссылку в поле!");
+        if (!/^https?:\/\//i.test(url)) {
+            url = 'https://' + url;
+        }
+        window.open(url, '_blank');
+    }
 
     window.addEventListener('appinstalled', function() {
         deferredPrompt = null;
