@@ -339,11 +339,17 @@ wss.on('connection', function(ws) {
 
                 console.log('📲 Отправка в шторку для телефонов (' + pushSubscriptions.length + ' шт.)...');
                 pushSubscriptions.forEach(function(item, index) {
-                    if (msg.target === 'ВСЕМ' || !item.user || item.user === 'ГОСТЬ' || item.user === msg.target) {
+                    // Не отправляем уведомление самому себе
+                    if (item.user === sender) return;
+
+                    // Если "ВСЕМ" — шлем каждому, иначе — СТРОГО выбранному подразделению
+                    const isForAll = (msg.target === 'ВСЕМ');
+                    const isExactTarget = (item.user && item.user === msg.target);
+
+                    if (isForAll || isExactTarget) {
                         webpush.sendNotification(item.sub, payload, pushOptions)
-                            .then(function() { console.log('---> Успешно доставлено в шторку (' + (item.user || 'Гость') + ')'); })
+                            .then(function() { console.log('---> Доставлено в шторку (' + (item.user || 'Гость') + ')'); })
                             .catch(function(err) {
-                                console.log('---> Ошибка доставки Push:', err.statusCode);
                                 if (err.statusCode === 410 || err.statusCode === 404) {
                                     pushSubscriptions.splice(index, 1);
                                     fs.writeFile(SUBS_FILE, JSON.stringify(pushSubscriptions), function() {});
@@ -351,7 +357,6 @@ wss.on('connection', function(ws) {
                             });
                     }
                 });
-            }
 
             if (msg.type === 'clear_alert') {
                 delete activeAlerts[msg.target];
