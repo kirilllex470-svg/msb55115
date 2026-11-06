@@ -112,20 +112,59 @@ const SW_CODE = [
 const server = http.createServer(function(req, res) {
     const urlPath = req.url.split('?')[0];
 
-    if (urlPath === '/manifest.json') {
-        res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
-        res.end(JSON.stringify({
-            name: 'Журнал МСБ55115',
-            short_name: 'МСБ55115',
-            start_url: '/',
-            display: 'standalone',
-            background_color: '#0f172a',
-            theme_color: '#1e293b',
-            icons: [
-                { src: '/icon.svg', sizes: '192x192', type: 'image/svg+xml', purpose: 'any maskable' },
-                { src: '/icon.svg', sizes: '512x512', type: 'image/svg+xml', purpose: 'any maskable' }
-            ]
-        }));
+       // Прокси-шлюз, который убирает защиту X-Frame-Options у SaluteJazz
+    if (urlPath === '/proxy') {
+        const query = req.url.split('?')[1] || '';
+        const params = new URLSearchParams(query);
+        const targetUrl = params.get('url');
+        if (!targetUrl) {
+            res.writeHead(400);
+            return res.end('No URL');
+        }
+        try {
+            const parsedUrl = new URL(targetUrl);
+            const options = {
+                hostname: parsedUrl.hostname,
+                path: parsedUrl.pathname + parsedUrl.search,
+                method: 'GET',
+                headers: {
+                    'User-Agent': req.headers['user-agent'] || 'Mozilla/5.0',
+                    'Accept': req.headers['accept'] || '*/*',
+                    'Accept-Language': 'ru-RU,ru;q=0.9'
+                }
+            };
+            https.get(options, function(proxyRes) {
+                const headers = Object.assign({}, proxyRes.headers);
+                // Удаляем заголовки, которые запрещают открытие внутри приложения
+                delete headers['x-frame-options'];
+                delete headers['content-security-policy'];
+                delete headers['content-security-policy-report-only'];
+                delete headers['x-content-type-options'];
+
+                let body = [];
+                proxyRes.on('data', function(chunk) { body.push(chunk); });
+                proxyRes.on('end', function() {
+                    let buffer = Buffer.concat(body);
+                    const contentType = headers['content-type'] || '';
+                    if (contentType.indexOf('text/html') !== -1) {
+                        let htmlStr = buffer.toString('utf8');
+                        // Привязываем все скрипты и стили к домену SaluteJazz
+                        const baseTag = '<base href="' + parsedUrl.origin + '/">';
+                        htmlStr = htmlStr.replace('<head>', '<head>' + baseTag);
+                        buffer = Buffer.from(htmlStr, 'utf8');
+                        headers['content-length'] = buffer.length;
+                    }
+                    res.writeHead(proxyRes.statusCode || 200, headers);
+                    res.end(buffer);
+                });
+            }).on('error', function(e) {
+                res.writeHead(500);
+                res.end('Ошибка прокси: ' + e.message);
+            });
+        } catch (e) {
+            res.writeHead(400);
+            res.end('Неверная ссылка');
+        }
         return;
     }
 
