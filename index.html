@@ -40,6 +40,8 @@
         .stream-main-btn.live { background: #dc2626; animation: pulseLive 1.5s infinite; }
         .maps-main-btn { width: 100%; margin-top: 12px; padding: 15px; background: #8b5cf6; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; transition: 0.2s; }
         .maps-main-btn:hover { background: #7c3aed; }
+        .archive-main-btn { width: 100%; margin-top: 12px; padding: 15px; background: #f59e0b; color: #090d16; border: none; border-radius: 8px; font-size: 16px; font-weight: 900; cursor: pointer; transition: 0.2s; }
+        .archive-main-btn:hover { background: #d97706; color: white; }
         @keyframes pulseLive { 0%, 100% { opacity: 1; } 50% { opacity: 0.8; } }
         .stream-box { display: none; margin-top: 12px; padding: 15px; background: #0f172a; border: 1px solid var(--accent); border-radius: 8px; box-sizing: border-box; }
         .stream-controls { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
@@ -47,7 +49,7 @@
         .stream-start-btn { padding: 12px 18px; background: #22c55e; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; }
         .stream-stop-btn { padding: 12px 18px; background: var(--danger); color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; }
         .stream-link-btn { width: 100%; padding: 14px; background: #2563eb; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; }
-                .maps-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-top: 12px; }
+        .maps-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-top: 12px; }
         .map-tile { position: relative; height: 190px; border-radius: 14px; overflow: hidden; background: #090d16; border: 1px solid #334155; cursor: pointer; transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.28s ease, border-color 0.28s ease; box-shadow: 0 6px 18px rgba(0,0,0,0.45); -webkit-tap-highlight-color: transparent; }
         .map-tile:hover, .map-tile:active { transform: translateY(-5px) scale(1.02); border-color: #38bdf8; box-shadow: 0 14px 30px rgba(56, 189, 248, 0.35); }
         .map-tile img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform 0.4s ease; }
@@ -64,9 +66,22 @@
         .lb-viewport { flex-grow: 1; width: 100%; overflow: hidden; position: relative; display: flex; justify-content: center; align-items: center; touch-action: none; cursor: grab; }
         .lb-viewport:active { cursor: grabbing; }
         #lightbox-img { max-width: 92%; max-height: 82vh; object-fit: contain; transform-origin: center center; transition: transform 0.08s ease-out; pointer-events: none; border: 1px solid #334155; border-radius: 6px; }
-        #stream-page { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #0f172a; z-index: 140000; flex-direction: column; box-sizing: border-box; }
+        #stream-page, #archive-page { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #0f172a; z-index: 140000; flex-direction: column; box-sizing: border-box; }
         .stream-page-header { width: 100%; padding: 12px 16px; background: #1e293b; border-bottom: 2px solid #3b82f6; display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; box-sizing: border-box; }
         #stream-iframe { flex-grow: 1; width: 100%; border: none; background: #090d16; }
+        .archive-body { flex-grow: 1; width: 100%; max-width: 1400px; margin: 0 auto; padding: 16px; overflow-y: auto; box-sizing: border-box; display: flex; flex-direction: column; gap: 18px; }
+        .calendar-card { background: #1e293b; border: 1px solid #334155; border-radius: 14px; padding: 16px; width: 100%; max-width: 520px; margin: 0 auto; box-sizing: border-box; box-shadow: 0 8px 25px rgba(0,0,0,0.4); }
+        .cal-nav { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+        .cal-month-title { font-size: 17px; font-weight: 900; color: #f8fafc; letter-spacing: 1px; }
+        .cal-weekdays { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; text-align: center; font-size: 12px; color: #94a3b8; font-weight: bold; margin-bottom: 6px; }
+        .cal-days { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
+        .cal-day { height: 46px; border-radius: 8px; background: #0f172a; border: 1px solid #334155; color: #cbd5e1; display: flex; flex-direction: column; justify-content: center; align-items: center; cursor: pointer; font-size: 14px; font-weight: bold; position: relative; transition: 0.2s; user-select: none; }
+        .cal-day:hover { border-color: #f59e0b; transform: translateY(-2px); }
+        .cal-day.empty { background: transparent; border-color: transparent; cursor: default; pointer-events: none; }
+        .cal-day.has-data { border-color: #22c55e; background: rgba(34, 197, 94, 0.12); color: #fff; }
+        .cal-day.selected { background: #f59e0b !important; color: #090d16 !important; border-color: #fbbf24 !important; font-weight: 900; }
+        .cal-dot { font-size: 10px; color: #4ade80; font-family: monospace; line-height: 1; margin-top: 2px; }
+        .cal-day.selected .cal-dot { color: #090d16; font-weight: 900; }
         #admin-zone { display: none; margin-top: 30px; padding: 20px; border: 2px solid var(--danger); border-radius: 10px; background: rgba(239, 68, 68, 0.1); }
         .admin-controls { display: flex; gap: 10px; }
         .admin-controls select { width: 200px; padding: 12px; border-radius: 6px; border: none; font-size: 16px; }
@@ -138,6 +153,41 @@
         </div>
         <iframe id="stream-iframe" src="about:blank" allow="camera; microphone; fullscreen; display-capture; autoplay"></iframe>
     </div>
+    <div id="archive-page">
+        <div class="stream-page-header" style="border-bottom-color:#f59e0b;">
+            <button type="button" class="lb-btn" style="background:#f59e0b; color:#090d16; border-color:#fbbf24; font-weight:900;" onclick="closeArchivePage()">⬅️ НАЗАД В ЖУРНАЛ</button>
+            <span style="color:#f8fafc; font-weight:bold; font-size:15px;">🗂️ АРХИВ ЖУРНАЛА СОБЫТИЙ МСБ-55115 (АВТОСБРОС В 24:00)</span>
+            <span id="archive-selected-label" style="color:#facc15; font-family:monospace; font-weight:bold; font-size:14px;">Выберите дату</span>
+        </div>
+        <div class="archive-body">
+            <div class="calendar-card">
+                <div class="cal-nav">
+                    <button type="button" class="lb-btn" onclick="changeArchiveMonth(-1)">◀ Пред.</button>
+                    <span class="cal-month-title" id="cal-month-label">Месяц</span>
+                    <button type="button" class="lb-btn" onclick="changeArchiveMonth(1)">След. ▶</button>
+                </div>
+                <div class="cal-weekdays">
+                    <span>ПН</span><span>ВТ</span><span>СР</span><span>ЧТ</span><span>ПТ</span><span>СБ</span><span>ВС</span>
+                </div>
+                <div class="cal-days" id="cal-days-grid"></div>
+            </div>
+            <div style="width:100%; background:#1e293b; border:1px solid #334155; border-left:4px solid #f59e0b; padding:10px 15px; border-radius:8px; box-sizing:border-box; display:flex; justify-content:space-between; align-items:center;">
+                <span id="archive-table-title" style="color:#f1f5f9; font-weight:bold; font-size:15px;">📅 Записи за выбранную дату</span>
+                <span id="archive-count-badge" style="color:#facc15; font-family:monospace; font-size:13px; font-weight:bold;">0 записей</span>
+            </div>
+            <div class="history-container">
+                <table>
+                    <thead>
+                        <tr id="archive-table-headers">
+                            <th style="width: 130px;">🕒 Время</th>
+                            <th style="width: 110px;">👤 Кто</th>
+                        </tr>
+                    </thead>
+                    <tbody id="archive-table-body"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
     <div id="alert-modal">
         <div class="alert-content">
             <h1 style="font-size: 40px; margin: 0;">🛑 СООБЩЕНИЕ!</h1>
@@ -159,7 +209,6 @@
             <div id="login-error" style="color: #ef4444; font-size: 14px; margin-top: 10px; display: none;">❌ Неверный пароль</div>
         </div>
     </div>
-
     <div class="input-panel" id="input-panel">
         <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:15px;">
             <h3 style="margin:0;">📝 ПОДРАЗДЕЛЕНИЕ: <span id="my-name"></span></h3>
@@ -195,6 +244,7 @@
             <div style="color:#94a3b8; font-size:13px; font-weight:bold;">📌 Актуальные вводные и карты (до 6 шт., нажмите для увеличения):</div>
             <div class="maps-grid" id="maps-tiles-grid"></div>
         </div>
+        <button type="button" class="archive-main-btn" onclick="openArchivePage()">🗂️ АРХИВ МСБ-55115</button>
         <div id="admin-zone">
             <h3 style="color: #ef4444; margin-top: 0;">⚡ УПРАВЛЕНИЕ И СВЯЗЬ</h3>
             <div style="color: #fca5a5; margin-bottom: 10px; font-size: 14px;">Отправить уведомление подразделению:</div>
@@ -212,14 +262,17 @@
         <div id="viewer-stream-panel" style="display:none; margin-bottom: 12px;">
             <button type="button" class="stream-link-btn" style="background:#dc2626;" onclick="openActiveStreamWindow()">🎥 ИДЕТ ВИДЕОСТРИМ МСБ-55115 — ПЕРЕЙТИ ПО ССЫЛКЕ</button>
         </div>
-        <h3 style="color:#94a3b8; margin: 0 0 10px 0; font-size: 16px;">🔔 Уведомления подразделения (последние 10 шт.)</h3>
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:10px;">
+            <h3 style="color:#94a3b8; margin:0; font-size:16px;">🔔 Уведомления подразделения (последние 10 шт.)</h3>
+            <button type="button" onclick="openArchivePage()" style="padding:6px 14px; background:#f59e0b; color:#090d16; border:none; border-radius:6px; font-weight:900; font-size:13px; cursor:pointer;">🗂️ АРХИВ МСБ-55115</button>
+        </div>
         <div class="notifications-list" id="notifications-list">
             <div style="color:#64748b; font-size:13px;" id="no-notif-placeholder">Нет уведомлений</div>
         </div>
     </div>
     <div style="width:100%; max-width:1400px; margin:15px 0 10px 0; display:flex; justify-content:space-between; align-items:center; background:#1e293b; border:1px solid #334155; border-left:4px solid #3b82f6; padding:10px 15px; border-radius:8px; box-sizing:border-box;">
         <span style="color:#f1f5f9; font-weight:bold; font-size:15px; letter-spacing:1px;">📊 ЖУРНАЛ СОБЫТИЙ МСБ-55115</span>
-        <span style="color:#22c55e; font-size:12px; font-weight:bold; background:rgba(34,197,94,0.15); padding:3px 8px; border-radius:4px; border:1px solid rgba(34,197,94,0.3); font-family:monospace;">● ОНЛАЙН</span>
+        <span style="color:#22c55e; font-size:12px; font-weight:bold; background:rgba(34,197,94,0.15); padding:3px 8px; border-radius:4px; border:1px solid rgba(34,197,94,0.3); font-family:monospace;">● ОНЛАЙН (АВТОАРХИВ В 24:00)</span>
     </div>
     <div class="history-container">
         <table>
@@ -289,6 +342,10 @@
     let pendingAlerts = {};
     let allNotifications = new Array();
     let allMaps = new Array();
+    let archiveData = {};
+    let calYear = new Date().getFullYear();
+    let calMonth = new Date().getMonth();
+    let selectedArchiveDate = "";
     let activeStream = { active: false, url: "" };
     let titleInterval = null;
     let soundInterval = null;
@@ -350,6 +407,7 @@
             btn.style.display = 'none';
         });
     });
+
     async function installPWA() {
         if (deferredPrompt) {
             deferredPrompt.prompt();
@@ -460,7 +518,7 @@
             navigator.wakeLock.request('screen').catch(function() {});
         }
     }
-   
+
     function updateLockScreenAlert(target, text, sender) {
         if ('mediaSession' in navigator) {
             navigator.mediaSession.metadata = new MediaMetadata({
@@ -489,7 +547,6 @@
             setTimeout(function() { osc.stop(); }, 450);
         } catch(e) {}
     }
-
     function handleStreamBtnClick() {
         if (currentUser === ADMIN_NAME) {
             const box = document.getElementById('admin-stream-box');
@@ -552,6 +609,7 @@
         ws.send(JSON.stringify({ type: 'stream_stop' }));
         closeStreamPage();
     }
+
     function updateStreamUI() {
         const mainBtn = document.getElementById('stream-main-btn');
         const userBox = document.getElementById('user-stream-box');
@@ -579,7 +637,6 @@
             if (viewerPanel) viewerPanel.style.display = 'none';
         }
     }
-
     function toggleMapsSection() {
         const box = document.getElementById('maps-section-box');
         if (!box) return;
@@ -672,7 +729,6 @@
         const lb = document.getElementById('photo-lightbox');
         if (lb) lb.style.display = 'none';
     }
-
     function renderMapsGrid() {
         const grid = document.getElementById('maps-tiles-grid');
         if (!grid) return;
@@ -703,28 +759,39 @@
         });
     }
 
-
-    
+    function fetchMapsFromServer() {
+        fetch('/maps-list?t=' + Date.now())
+            .then(function(r) { return r.json(); })
+            .then(function(list) {
+                if (Array.isArray(list)) {
+                    allMaps = list;
+                    renderMapsGrid();
+                }
+            })
+            .catch(function() {});
+    }
 
     function uploadMapPhoto() {
-        if (currentUser !== ADMIN_NAME) return;
+        if (currentUser !== ADMIN_NAME) return alert('Загружать карты может только АДМИН!');
         const fileInput = document.getElementById('map-file-input');
         const targetSelect = document.getElementById('map-target-select');
         if (!fileInput || !fileInput.files || fileInput.files.length === 0) {
-            return alert('Выберите фотографию или карту на устройстве!');
+            return alert('Сначала выберите фотографию или карту!');
         }
-        const file = fileInput.files.at(0);
-        const target = targetSelect ? targetSelect.value : 'ВСЕМ';
+        const file = fileInput.files.item(0);
+        const target = (targetSelect && targetSelect.value) ? targetSelect.value : 'ВСЕМ';
         const reader = new FileReader();
 
         reader.onload = function(e) {
+            const rawDataUrl = e.target.result;
             const img = new Image();
+
             img.onload = function() {
                 const canvas = document.createElement('canvas');
-                const maxW = 1280;
-                const maxH = 1280;
-                let w = img.width;
-                let h = img.height;
+                const maxW = 750;
+                const maxH = 750;
+                let w = img.width || 600;
+                let h = img.height || 600;
                 if (w > maxW || h > maxH) {
                     if (w > h) { h = Math.round(h * (maxW / w)); w = maxW; }
                     else { w = Math.round(w * (maxH / h)); h = maxH; }
@@ -733,25 +800,170 @@
                 canvas.height = h;
                 const ctx = canvas.getContext('2d');
                 ctx.drawImage(img, 0, 0, w, h);
-                const dataUrl = canvas.toDataURL('image/jpeg', 0.82);
+                const finalDataUrl = canvas.toDataURL('image/jpeg', 0.65);
 
                 const now = new Date();
                 const timeStr = now.toLocaleDateString() + ' ' + now.toLocaleTimeString().slice(0, 5);
-                ws.send(JSON.stringify({
-                    type: 'upload_map',
+                const payloadObj = {
                     sender: currentUser,
                     color: userColor,
                     target: target,
                     time: timeStr,
-                    image: dataUrl
-                }));
-                fileInput.value = '';
+                    image: finalDataUrl
+                };
+
+                fetch('/upload-map', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payloadObj)
+                })
+                .then(function(res) { return res.json(); })
+                .then(function(data) {
+                    fileInput.value = '';
+                    if (data && Array.isArray(data.maps)) {
+                        allMaps = data.maps;
+                        renderMapsGrid();
+                    } else {
+                        fetchMapsFromServer();
+                    }
+                })
+                .catch(function() {
+                    alert('Ошибка при отправке фото на сервер!');
+                });
             };
-            img.src = e.target.result;
+
+            img.src = rawDataUrl;
         };
+
         reader.readAsDataURL(file);
     }
+    const MONTH_NAMES = Array.of(
+        "ЯНВАРЬ", "ФЕВРАЛЬ", "МАРТ", "АПРЕЛЬ", "МАЙ", "ИЮНЬ",
+        "ИЮЛЬ", "АВГУСТ", "СЕНТЯБРЬ", "ОКТЯБРЬ", "НОЯБРЬ", "ДЕКАБРЬ"
+    );
 
+    function formatIsoDate(y, m, d) {
+        const mm = String(m + 1).padStart(2, '0');
+        const dd = String(d).padStart(2, '0');
+        return y + '-' + mm + '-' + dd;
+    }
+
+    function formatRuDateFromIso(iso) {
+        if (!iso) return '';
+        const parts = iso.split('-');
+        if (parts.length !== 3) return iso;
+        return parts.at(2) + '.' + parts.at(1) + '.' + parts.at(0);
+    }
+
+    function fetchArchiveFromServer(cb) {
+        fetch('/archive-data?t=' + Date.now())
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                if (data && typeof data === 'object') {
+                    archiveData = data;
+                    renderArchiveCalendar();
+                    if (selectedArchiveDate) selectArchiveDate(selectedArchiveDate);
+                    if (cb) cb();
+                }
+            })
+            .catch(function() {});
+    }
+
+    function openArchivePage() {
+        const page = document.getElementById('archive-page');
+        if (!page) return;
+        const now = new Date();
+        calYear = now.getFullYear();
+        calMonth = now.getMonth();
+        const todayKey = formatIsoDate(calYear, calMonth, now.getDate());
+        if (!selectedArchiveDate) selectedArchiveDate = todayKey;
+
+        page.style.display = 'flex';
+        renderArchiveCalendar();
+        selectArchiveDate(selectedArchiveDate);
+        fetchArchiveFromServer();
+    }
+
+    function closeArchivePage() {
+        const page = document.getElementById('archive-page');
+        if (page) page.style.display = 'none';
+    }
+
+    function changeArchiveMonth(delta) {
+        calMonth += delta;
+        if (calMonth < 0) { calMonth = 11; calYear--; }
+        if (calMonth > 11) { calMonth = 0; calYear++; }
+        renderArchiveCalendar();
+    }
+
+    function renderArchiveCalendar() {
+        const titleEl = document.getElementById('cal-month-label');
+        const gridEl = document.getElementById('cal-days-grid');
+        if (!titleEl || !gridEl) return;
+
+        titleEl.innerText = MONTH_NAMES.at(calMonth) + ' ' + calYear;
+        gridEl.innerHTML = '';
+
+        const firstDay = new Date(calYear, calMonth, 1).getDay();
+        const startOffset = (firstDay === 0) ? 6 : (firstDay - 1);
+        const daysInMonth = new Date(calYear, calMonth + 1, 0).getDate();
+
+        for (let i = 0; i < startOffset; i++) {
+            const emptyDiv = document.createElement('div');
+            emptyDiv.className = 'cal-day empty';
+            gridEl.appendChild(emptyDiv);
+        }
+
+        for (let d = 1; d <= daysInMonth; d++) {
+            const dateKey = formatIsoDate(calYear, calMonth, d);
+            const rowsForDay = archiveData[dateKey] || new Array();
+            const count = Array.isArray(rowsForDay) ? rowsForDay.length : 0;
+
+            const cell = document.createElement('div');
+            cell.className = 'cal-day' + (count > 0 ? ' has-data' : '') + (selectedArchiveDate === dateKey ? ' selected' : '');
+            cell.innerHTML =
+                '<span>' + d + '</span>' +
+                (count > 0 ? '<span class="cal-dot">' + count + ' зап.</span>' : '');
+            cell.onclick = function() {
+                selectArchiveDate(dateKey);
+            };
+            gridEl.appendChild(cell);
+        }
+    }
+
+    function selectArchiveDate(dateKey) {
+        selectedArchiveDate = dateKey;
+        renderArchiveCalendar();
+
+        const ruDate = formatRuDateFromIso(dateKey);
+        const lbl = document.getElementById('archive-selected-label');
+        const tTitle = document.getElementById('archive-table-title');
+        const badge = document.getElementById('archive-count-badge');
+        const tbody = document.getElementById('archive-table-body');
+        if (lbl) lbl.innerText = '📅 ' + ruDate;
+        if (tTitle) tTitle.innerText = '📊 Архив журнала за ' + ruDate;
+
+        const rows = Array.isArray(archiveData[dateKey]) ? archiveData[dateKey] : new Array();
+        if (badge) badge.innerText = rows.length + ' записей';
+        if (!tbody) return;
+        tbody.innerHTML = '';
+
+        if (rows.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="' + (COLUMNS_CONFIG.length + 2) + '" style="color:#64748b; padding:20px;">За ' + ruDate + ' записей в архиве нет</td></tr>';
+            return;
+        }
+
+        rows.forEach(function(row) {
+            const tr = document.createElement('tr');
+            let html = '<td class="time-cell">' + (row.time || '-') + '</td><td class="user-cell" style="color:' + (row.color || '#fff') + '">' + (row.user || '-') + '</td>';
+            for (let i = 0; i < COLUMNS_CONFIG.length; i++) {
+                const val = (row.values && row.values.at(i) !== undefined) ? row.values.at(i) : '-';
+                html += '<td>' + (val || '-') + '</td>';
+            }
+            tr.innerHTML = html;
+            tbody.appendChild(tr);
+        });
+    }
     function isNotificationVisibleForMe(notif) {
         if (!notif) return false;
         if (notif.target === "ВСЕМ") return true;
@@ -799,6 +1011,7 @@
         if (typeof raw === 'string') return Array.of({ id: null, text: raw, sender: ADMIN_NAME, readList: new Array() });
         return Array.of(raw);
     }
+
     function connectWS() {
         if (ws && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING)) return;
         ws = new WebSocket(location.origin.replace(/^http/, 'ws'));
@@ -809,9 +1022,9 @@
                 document.getElementById('table-body').innerHTML = '';
                 msg.data.forEach(appendRow);
                 allNotifications = msg.notifications || new Array();
-                allMaps = msg.maps || new Array();
                 renderNotificationsWindow();
-                renderMapsGrid();
+                fetchMapsFromServer();
+                fetchArchiveFromServer();
 
                 if (msg.streamState) {
                     activeStream = msg.streamState;
@@ -826,14 +1039,19 @@
                     checkAndShowAlerts(false);
                 }
             }
-            if (msg.type === 'new_row') appendRow(msg.row);
+            if (msg.type === 'new_row') {
+                appendRow(msg.row);
+                fetchArchiveFromServer();
+            }
+            if (msg.type === 'daily_archived') {
+                document.getElementById('table-body').innerHTML = '';
+                fetchArchiveFromServer();
+            }
             if (msg.type === 'new_map') {
-                if (msg.mapItem) {
-                    allMaps.push(msg.mapItem);
-                    renderMapsGrid();
-                    if (isMapVisibleForMe(msg.mapItem)) {
-                        document.getElementById('maps-section-box').style.display = 'block';
-                    }
+                fetchMapsFromServer();
+                if (!msg.target || msg.target === 'ВСЕМ' || currentUser === ADMIN_NAME || msg.target === currentUser) {
+                    const box = document.getElementById('maps-section-box');
+                    if (box) box.style.display = 'block';
                 }
             }
             if (msg.type === 'stream_state') {
@@ -927,6 +1145,7 @@
             connectWS();
         }
     }, 4000);
+
     function populateTargetSelect() {
         const adminSelect = document.getElementById('admin-target');
         const mapSelect = document.getElementById('map-target-select');
@@ -982,7 +1201,6 @@
             document.getElementById('admin-maps-upload').style.display = 'none';
         }
     }
-
     function initApp() {
         runSplash();
         document.getElementById('login-error').style.display = 'none';
@@ -1013,15 +1231,23 @@
         });
 
         const headerRow = document.getElementById('table-headers');
+        const archHeaderRow = document.getElementById('archive-table-headers');
         const inputContainer = document.getElementById('dynamic-inputs');
         
         headerRow.innerHTML = '<th style="width: 130px;">🕒 Время</th><th style="width: 110px;">👤 Кто</th>';
+        if (archHeaderRow) archHeaderRow.innerHTML = '<th style="width: 130px;">🕒 Время</th><th style="width: 110px;">👤 Кто</th>';
         inputContainer.innerHTML = '';
 
         COLUMNS_CONFIG.forEach(function(col, index) {
             let th = document.createElement('th'); 
             th.innerText = col.label; 
             headerRow.appendChild(th);
+
+            if (archHeaderRow) {
+                let thArch = document.createElement('th');
+                thArch.innerText = col.label;
+                archHeaderRow.appendChild(thArch);
+            }
             
             let div = document.createElement('div'); 
             div.className = 'field-group';
@@ -1050,6 +1276,7 @@
     }
     
     initApp();
+
     function attemptLogin() {
         unlockMobileFeatures();
         const userIndex = Number(document.getElementById('login-select').value);
@@ -1086,7 +1313,6 @@
         subscribeToWebPush();
         checkAndShowAlerts(false);
     }
-
     function sendAdminAlert() {
         if (!currentUser) return;
         const target = document.getElementById('admin-target').value;
@@ -1110,7 +1336,7 @@
 
     function clearHistoryAdmin() {
         if (currentUser !== ADMIN_NAME) return;
-        if (confirm("⚠️ Вы уверены, что хотите ПОЛНОСТЬЮ очистить весь журнал событий у всех участников?")) {
+        if (confirm("⚠️ Вы уверены, что хотите ПОЛНОСТЬЮ очистить текущий журнал событий у всех участников?")) {
             ws.send(JSON.stringify({ type: 'clear_history' }));
         }
     }
