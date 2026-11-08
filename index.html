@@ -38,13 +38,26 @@
         .send-btn { width: 100%; padding: 15px; background: #22c55e; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; }
         .stream-main-btn { width: 100%; margin-top: 12px; padding: 15px; background: #3b82f6; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; }
         .stream-main-btn.live { background: #dc2626; animation: pulseLive 1.5s infinite; }
+        .maps-main-btn { width: 100%; margin-top: 12px; padding: 15px; background: #8b5cf6; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; transition: 0.2s; }
+        .maps-main-btn:hover { background: #7c3aed; }
         @keyframes pulseLive { 0%, 100% { opacity: 1; } 50% { opacity: 0.8; } }
         .stream-box { display: none; margin-top: 12px; padding: 15px; background: #0f172a; border: 1px solid var(--accent); border-radius: 8px; box-sizing: border-box; }
-        .stream-controls { display: flex; gap: 10px; flex-wrap: wrap; }
-        .stream-controls input { flex-grow: 1; padding: 12px; background: #1e293b; border: 1px solid var(--border); color: white; border-radius: 6px; font-size: 15px; outline: none; }
+        .stream-controls { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+        .stream-controls input, .stream-controls select { flex-grow: 1; padding: 12px; background: #1e293b; border: 1px solid var(--border); color: white; border-radius: 6px; font-size: 15px; outline: none; }
         .stream-start-btn { padding: 12px 18px; background: #22c55e; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; }
         .stream-stop-btn { padding: 12px 18px; background: var(--danger); color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; }
         .stream-link-btn { width: 100%; padding: 14px; background: #2563eb; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; }
+        .maps-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-top: 12px; }
+        .map-tile { position: relative; height: 190px; border-radius: 14px; overflow: hidden; background: #090d16; border: 1px solid #334155; cursor: pointer; transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.28s ease, border-color 0.28s ease; box-shadow: 0 6px 18px rgba(0,0,0,0.45); -webkit-tap-highlight-color: transparent; }
+        .map-tile:hover, .map-tile:active { transform: translateY(-5px) scale(1.02); border-color: #38bdf8; box-shadow: 0 14px 30px rgba(56, 189, 248, 0.35); }
+        .map-tile img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform 0.4s ease; }
+        .map-tile:hover img, .map-tile:active img { transform: scale(1.07); }
+        .map-tile-overlay { position: absolute; bottom: 0; left: 0; right: 0; padding: 28px 12px 10px 12px; background: linear-gradient(to top, rgba(9, 13, 22, 0.96) 0%, rgba(9, 13, 22, 0.65) 60%, transparent 100%); display: flex; justify-content: space-between; align-items: flex-end; }
+        .map-tile-time { color: #facc15; font-family: monospace; font-size: 12px; font-weight: bold; }
+        .map-tile-target { background: rgba(59, 130, 246, 0.85); color: white; padding: 2px 8px; border-radius: 6px; font-size: 11px; font-weight: bold; }
+        .map-tile-fresh { position: absolute; top: 10px; left: 10px; background: #22c55e; color: #052e16; font-size: 10px; font-weight: 900; padding: 3px 8px; border-radius: 999px; box-shadow: 0 2px 8px rgba(0,0,0,0.5); }
+        #photo-lightbox { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(9, 13, 22, 0.96); z-index: 150000; flex-direction: column; justify-content: center; align-items: center; padding: 15px; box-sizing: border-box; }
+        #photo-lightbox img { max-width: 96%; max-height: 82vh; border-radius: 12px; border: 2px solid #38bdf8; box-shadow: 0 0 40px rgba(56, 189, 248, 0.3); object-fit: contain; }
         #admin-zone { display: none; margin-top: 30px; padding: 20px; border: 2px solid var(--danger); border-radius: 10px; background: rgba(239, 68, 68, 0.1); }
         .admin-controls { display: flex; gap: 10px; }
         .admin-controls select { width: 200px; padding: 12px; border-radius: 6px; border: none; font-size: 16px; }
@@ -72,11 +85,11 @@
         .user-cell { font-weight: bold; }
         @media (max-width: 768px) {
             body { padding: 10px; }
-            .inputs-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+            .inputs-grid, .maps-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
             .admin-controls, .stream-controls { flex-direction: column; }
-            .admin-controls select, .admin-controls input, .admin-controls button, .stream-controls input, .stream-controls button { width: 100%; box-sizing: border-box; }
+            .admin-controls select, .admin-controls input, .admin-controls button, .stream-controls input, .stream-controls select, .stream-controls button { width: 100%; box-sizing: border-box; }
         }
-        @media (max-width: 480px) { .inputs-grid { grid-template-columns: 1fr; } }
+        @media (max-width: 480px) { .inputs-grid, .maps-grid { grid-template-columns: 1fr; } }
     </style>
 </head>
 <body>
@@ -92,6 +105,11 @@
                 <span class="splash-file-tag" id="splash-tag">[0%]</span>
             </div>
         </div>
+    </div>
+    <div id="photo-lightbox" onclick="closePhotoLightbox()">
+        <img id="lightbox-img" src="" alt="Карта">
+        <div id="lightbox-caption" style="color:#f8fafc; margin-top:12px; font-weight:bold; font-size:15px;"></div>
+        <button type="button" style="margin-top:12px; padding:10px 24px; background:#ef4444; color:white; border:none; border-radius:8px; font-weight:bold; cursor:pointer;">✖ ЗАКРЫТЬ</button>
     </div>
     <div id="alert-modal">
         <div class="alert-content">
@@ -135,6 +153,19 @@
         </div>
         <div class="stream-box" id="user-stream-box">
             <button type="button" class="stream-link-btn" onclick="openActiveStreamWindow()">🔗 ПЕРЕЙТИ ПО ССЫЛКЕ</button>
+        </div>
+        <button type="button" class="maps-main-btn" id="maps-main-btn" onclick="toggleMapsSection()">🗺️ ВВОДНЫЕ / КАРТА</button>
+        <div class="stream-box" id="maps-section-box" style="border-color:#8b5cf6;">
+            <div id="admin-maps-upload" style="display:none; margin-bottom:15px; padding-bottom:15px; border-bottom:1px solid #334155;">
+                <div style="color:#c4b5fd; font-size:13px; margin-bottom:8px; font-weight:bold;">📤 Отправить фото / карту подразделению:</div>
+                <div class="stream-controls">
+                    <select id="map-target-select"></select>
+                    <input type="file" id="map-file-input" accept="image/*">
+                    <button type="button" class="stream-start-btn" style="background:#8b5cf6;" onclick="uploadMapPhoto()">📤 ЗАГРУЗИТЬ ФОТО</button>
+                </div>
+            </div>
+            <div style="color:#94a3b8; font-size:13px; font-weight:bold;">📌 Актуальные вводные и карты (до 6 шт., нажмите для увеличения):</div>
+            <div class="maps-grid" id="maps-tiles-grid"></div>
         </div>
         <div id="admin-zone">
             <h3 style="color: #ef4444; margin-top: 0;">⚡ УПРАВЛЕНИЕ И СВЯЗЬ</h3>
@@ -229,6 +260,7 @@
     let currentAlertSender = "";
     let pendingAlerts = {};
     let allNotifications = new Array();
+    let allMaps = new Array();
     let activeStream = { active: false, url: "" };
     let titleInterval = null;
     let soundInterval = null;
@@ -497,6 +529,112 @@
         }
     }
 
+    function toggleMapsSection() {
+        const box = document.getElementById('maps-section-box');
+        if (!box) return;
+        box.style.display = (box.style.display === 'block') ? 'none' : 'block';
+        renderMapsGrid();
+    }
+
+    function isMapVisibleForMe(m) {
+        if (!m) return false;
+        if (m.target === "ВСЕМ") return true;
+        if (currentUser === ADMIN_NAME) return true;
+        if (currentUser && (m.target === currentUser || m.sender === currentUser)) return true;
+        return false;
+    }
+
+    function openPhotoLightbox(src, caption) {
+        const lb = document.getElementById('photo-lightbox');
+        const img = document.getElementById('lightbox-img');
+        const cap = document.getElementById('lightbox-caption');
+        if (lb && img) {
+            img.src = src;
+            if (cap) cap.innerText = caption || '';
+            lb.style.display = 'flex';
+        }
+    }
+
+    function closePhotoLightbox() {
+        const lb = document.getElementById('photo-lightbox');
+        if (lb) lb.style.display = 'none';
+    }
+
+    function renderMapsGrid() {
+        const grid = document.getElementById('maps-tiles-grid');
+        if (!grid) return;
+        grid.innerHTML = '';
+
+        const myMaps = allMaps.filter(isMapVisibleForMe).slice(-6).reverse();
+
+        if (myMaps.length === 0) {
+            grid.innerHTML = '<div style="color:#64748b; font-size:13px; grid-column: 1 / -1; padding:10px 0;">Нет загруженных карт или вводных</div>';
+            return;
+        }
+
+        myMaps.forEach(function(m, idx) {
+            const tile = document.createElement('div');
+            tile.className = 'map-tile';
+            const badge = (idx === 0) ? '<span class="map-tile-fresh">СВЕЖЕЕ</span>' : '';
+            tile.innerHTML =
+                badge +
+                '<img src="' + m.image + '" alt="Карта">' +
+                '<div class="map-tile-overlay">' +
+                    '<span class="map-tile-time">🕒 ' + m.time + '</span>' +
+                    '<span class="map-tile-target">' + m.target + '</span>' +
+                '</div>';
+            tile.onclick = function() {
+                openPhotoLightbox(m.image, 'КОМУ: ' + m.target + ' | ВРЕМЯ: ' + m.time);
+            };
+            grid.appendChild(tile);
+        });
+    }
+    function uploadMapPhoto() {
+        if (currentUser !== ADMIN_NAME) return;
+        const fileInput = document.getElementById('map-file-input');
+        const targetSelect = document.getElementById('map-target-select');
+        if (!fileInput || !fileInput.files || fileInput.files.length === 0) {
+            return alert('Выберите фотографию или карту на устройстве!');
+        }
+        const file = fileInput.files.at(0);
+        const target = targetSelect ? targetSelect.value : 'ВСЕМ';
+        const reader = new FileReader();
+
+        reader.onload = function(e) {
+            const img = new Image();
+            img.onload = function() {
+                const canvas = document.createElement('canvas');
+                const maxW = 1280;
+                const maxH = 1280;
+                let w = img.width;
+                let h = img.height;
+                if (w > maxW || h > maxH) {
+                    if (w > h) { h = Math.round(h * (maxW / w)); w = maxW; }
+                    else { w = Math.round(w * (maxH / h)); h = maxH; }
+                }
+                canvas.width = w;
+                canvas.height = h;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, w, h);
+                const dataUrl = canvas.toDataURL('image/jpeg', 0.82);
+
+                const now = new Date();
+                const timeStr = now.toLocaleDateString() + ' ' + now.toLocaleTimeString().slice(0, 5);
+                ws.send(JSON.stringify({
+                    type: 'upload_map',
+                    sender: currentUser,
+                    color: userColor,
+                    target: target,
+                    time: timeStr,
+                    image: dataUrl
+                }));
+                fileInput.value = '';
+            };
+            img.src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+    }
+
     function isNotificationVisibleForMe(notif) {
         if (!notif) return false;
         if (notif.target === "ВСЕМ") return true;
@@ -554,7 +692,9 @@
                 document.getElementById('table-body').innerHTML = '';
                 msg.data.forEach(appendRow);
                 allNotifications = msg.notifications || new Array();
+                allMaps = msg.maps || new Array();
                 renderNotificationsWindow();
+                renderMapsGrid();
 
                 if (msg.streamState) {
                     activeStream = msg.streamState;
@@ -570,6 +710,15 @@
                 }
             }
             if (msg.type === 'new_row') appendRow(msg.row);
+            if (msg.type === 'new_map') {
+                if (msg.mapItem) {
+                    allMaps.push(msg.mapItem);
+                    renderMapsGrid();
+                    if (isMapVisibleForMe(msg.mapItem)) {
+                        document.getElementById('maps-section-box').style.display = 'block';
+                    }
+                }
+            }
             if (msg.type === 'stream_state') {
                 activeStream = msg.streamState || { active: false, url: '' };
                 updateStreamUI();
@@ -577,9 +726,11 @@
             if (msg.type === 'history_cleared') {
                 document.getElementById('table-body').innerHTML = '';
                 allNotifications = new Array();
+                allMaps = new Array();
                 pendingAlerts = {};
                 stopAlertVisuals();
                 renderNotificationsWindow();
+                renderMapsGrid();
             }
             if (msg.type === 'admin_alert') {
                 if (msg.notif) {
@@ -659,25 +810,40 @@
             connectWS();
         }
     }, 4000);
-
     function populateTargetSelect() {
         const adminSelect = document.getElementById('admin-target');
-        adminSelect.innerHTML = '';
+        const mapSelect = document.getElementById('map-target-select');
+        if (adminSelect) adminSelect.innerHTML = '';
+        if (mapSelect) mapSelect.innerHTML = '';
 
         let optAll = document.createElement('option');
         optAll.value = "ВСЕМ";
         optAll.innerText = "📢 ВСЕМ ПОДРАЗДЕЛЕНИЯМ";
-        adminSelect.appendChild(optAll);
+        if (adminSelect) adminSelect.appendChild(optAll);
+
+        let optAllMap = document.createElement('option');
+        optAllMap.value = "ВСЕМ";
+        optAllMap.innerText = "📢 ВСЕМ ПОДРАЗДЕЛЕНИЯМ";
+        if (mapSelect) mapSelect.appendChild(optAllMap);
 
         USERS_CONFIG.forEach(function(u) {
             if (u.name !== currentUser) {
-                let opt2 = document.createElement('option');
-                opt2.value = u.name;
-                opt2.innerText = u.name;
-                adminSelect.appendChild(opt2);
+                if (adminSelect) {
+                    let opt2 = document.createElement('option');
+                    opt2.value = u.name;
+                    opt2.innerText = u.name;
+                    adminSelect.appendChild(opt2);
+                }
+                if (mapSelect) {
+                    let optMap = document.createElement('option');
+                    optMap.value = u.name;
+                    optMap.innerText = u.name;
+                    mapSelect.appendChild(optMap);
+                }
             }
         });
     }
+
     function applyUserUI() {
         document.getElementById('login-overlay').style.display = 'none';
         document.getElementById('input-panel').style.display = 'block';
@@ -687,13 +853,16 @@
         document.getElementById('admin-zone').style.display = 'block';
         populateTargetSelect();
         renderNotificationsWindow();
+        renderMapsGrid();
         updateStreamUI();
 
         if (currentUser === ADMIN_NAME) {
             document.getElementById('clear-history-box').style.display = 'block';
+            document.getElementById('admin-maps-upload').style.display = 'block';
         } else {
             document.getElementById('clear-history-box').style.display = 'none';
             document.getElementById('admin-stream-box').style.display = 'none';
+            document.getElementById('admin-maps-upload').style.display = 'none';
         }
     }
 
@@ -764,7 +933,6 @@
     }
     
     initApp();
-
     function attemptLogin() {
         unlockMobileFeatures();
         const userIndex = Number(document.getElementById('login-select').value);
@@ -785,6 +953,7 @@
             document.getElementById('login-error').style.display = 'block';
         }
     }
+
     function logoutUser() {
         localStorage.removeItem('journal_user');
         localStorage.removeItem('journal_color');
@@ -795,6 +964,7 @@
         unlockMobileFeatures();
         document.getElementById('login-overlay').style.display = 'none';
         renderNotificationsWindow();
+        renderMapsGrid();
         updateStreamUI();
         subscribeToWebPush();
         checkAndShowAlerts(false);
