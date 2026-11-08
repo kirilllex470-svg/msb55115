@@ -202,7 +202,6 @@ const server = http.createServer(function(req, res) {
         }
     });
 });
-
 const wss = new WebSocket.Server({ server: server });
 
 let tableHistory = new Array(); 
@@ -226,13 +225,14 @@ if (fs.existsSync(NOTIFS_FILE)) {
         notificationsHistory.forEach(function(n) {
             if (!n.read) {
                 if (!Array.isArray(activeAlerts[n.target])) activeAlerts[n.target] = new Array();
-                activeAlerts[n.target].push({ id: n.id, text: n.text, sender: n.sender });
+                activeAlerts[n.target].push({ id: n.id, text: n.text, sender: n.sender, readList: new Array() });
             }
         });
     } catch (e) {
         notificationsHistory = new Array();
     }
 }
+
 function broadcastAlert(sender, color, timeStr, target, text) {
     const notifId = Date.now() + Math.floor(Math.random() * 1000);
     const newNotif = {
@@ -258,7 +258,8 @@ function broadcastAlert(sender, color, timeStr, target, text) {
     activeAlerts[target].push({
         id: notifId,
         text: text,
-        sender: sender
+        sender: sender,
+        readList: new Array()
     });
 
     wss.clients.forEach(function(client) {
@@ -292,7 +293,6 @@ function broadcastAlert(sender, color, timeStr, target, text) {
         }
     });
 }
-
 wss.on('connection', function(ws) {
     ws.send(JSON.stringify({ 
         type: 'init', 
