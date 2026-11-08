@@ -7,6 +7,7 @@ const webpush = require('web-push');
 const DATA_DIR = fs.existsSync('/data') ? '/data/' : '';
 const DB_FILE = DATA_DIR + 'history.json';
 const NOTIFS_FILE = DATA_DIR + 'notifications.json';
+const MAPS_FILE = DATA_DIR + 'maps.json';
 const SUBS_FILE = DATA_DIR + 'subscriptions.json';
 const VAPID_FILE = DATA_DIR + 'vapid.json';
 
@@ -202,10 +203,11 @@ const server = http.createServer(function(req, res) {
         }
     });
 });
-const wss = new WebSocket.Server({ server: server });
+const wss = new WebSocket.Server({ server: server, maxPayload: 20 * 1024 * 1024 });
 
 let tableHistory = new Array(); 
 let notificationsHistory = new Array();
+let mapsHistory = new Array();
 let activeAlerts = {}; 
 let streamState = { active: false, url: '' };
 
@@ -230,6 +232,15 @@ if (fs.existsSync(NOTIFS_FILE)) {
         });
     } catch (e) {
         notificationsHistory = new Array();
+    }
+}
+
+if (fs.existsSync(MAPS_FILE)) {
+    try {
+        const mapsContent = fs.readFileSync(MAPS_FILE, 'utf8');
+        mapsHistory = mapsContent.trim() ? JSON.parse(mapsContent) : new Array();
+    } catch (e) {
+        mapsHistory = new Array();
     }
 }
 
@@ -298,6 +309,7 @@ wss.on('connection', function(ws) {
         type: 'init', 
         data: tableHistory, 
         notifications: notificationsHistory,
+        maps: mapsHistory,
         alerts: activeAlerts,
         streamState: streamState,
         vapidPublicKey: vapidKeys.publicKey 
@@ -341,6 +353,37 @@ wss.on('connection', function(ws) {
                 });
             }
 
+            if (msg.type === 'upload_map' && msg.image) {
+                const now = new Date();
+                const timeStr = msg.time || (now.toLocaleDateString() + ' ' + now.toLocaleTimeString().slice(0, 5));
+                const mapItem = {
+                    id: Date.now(),
+                    sender: msg.sender || 'АДМИН',
+                    target: msg.target || 'ВСЕМ',
+                    time: timeStr,
+                    image: msg.image
+                };
+                mapsHistory.push(mapItem);
+                if (mapsHistory.length > 30) {
+                    mapsHistory = mapsHistory.slice(-30);
+                }
+                fs.writeFile(MAPS_FILE, JSON.stringify(mapsHistory), function() {});
+
+                wss.clients.forEach(function(client) {
+                    if (client.readyState === WebSocket.OPEN) {
+                        client.send(JSON.stringify({ type: 'new_map', mapItem: mapItem }));
+                    }
+                });
+
+                broadcastAlert(
+                    msg.sender || 'АДМИН',
+                    msg.color || '#8b5cf6',
+                    timeStr,
+                    msg.target || 'ВСЕМ',
+                    '🗺️ ЗАГРУЖЕНА НОВАЯ ВВОДНАЯ / КАРТА! Откройте раздел "ВВОДНЫЕ / КАРТА"'
+                );
+            }
+
             if (msg.type === 'stream_start') {
                 streamState = { active: true, url: msg.url };
                 wss.clients.forEach(function(client) {
@@ -365,9 +408,11 @@ wss.on('connection', function(ws) {
             if (msg.type === 'clear_history') {
                 tableHistory = new Array();
                 notificationsHistory = new Array();
+                mapsHistory = new Array();
                 activeAlerts = {};
                 fs.writeFile(DB_FILE, JSON.stringify(tableHistory), function() {});
                 fs.writeFile(NOTIFS_FILE, JSON.stringify(notificationsHistory), function() {});
+                fs.writeFile(MAPS_FILE, JSON.stringify(mapsHistory), function() {});
 
                 wss.clients.forEach(function(client) {
                     if (client.readyState === WebSocket.OPEN) {
