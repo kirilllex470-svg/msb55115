@@ -594,44 +594,79 @@
         const fileInput = document.getElementById('map-file-input');
         const targetSelect = document.getElementById('map-target-select');
         if (!fileInput || !fileInput.files || fileInput.files.length === 0) {
-            return alert('Выберите фотографию или карту на устройстве!');
+            return alert('Сначала выберите фотографию или карту!');
         }
-        const file = fileInput.files.at(0);
-        const target = targetSelect ? targetSelect.value : 'ВСЕМ';
+        const file = fileInput.files.item(0);
+        if (!file) return alert('Не удалось прочитать файл!');
+
+        const target = (targetSelect && targetSelect.value) ? targetSelect.value : 'ВСЕМ';
         const reader = new FileReader();
 
+        reader.onerror = function() {
+            alert('Ошибка чтения файла с устройства!');
+        };
+
         reader.onload = function(e) {
+            const rawDataUrl = e.target.result;
             const img = new Image();
+
             img.onload = function() {
-                const canvas = document.createElement('canvas');
-                const maxW = 1280;
-                const maxH = 1280;
-                let w = img.width;
-                let h = img.height;
-                if (w > maxW || h > maxH) {
-                    if (w > h) { h = Math.round(h * (maxW / w)); w = maxW; }
-                    else { w = Math.round(w * (maxH / h)); h = maxH; }
+                let finalDataUrl = rawDataUrl;
+                try {
+                    const canvas = document.createElement('canvas');
+                    const maxW = 900;
+                    const maxH = 900;
+                    let w = img.width || 800;
+                    let h = img.height || 600;
+                    if (w > maxW || h > maxH) {
+                        if (w > h) { h = Math.round(h * (maxW / w)); w = maxW; }
+                        else { w = Math.round(w * (maxH / h)); h = maxH; }
+                    }
+                    canvas.width = w;
+                    canvas.height = h;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, w, h);
+                    finalDataUrl = canvas.toDataURL('image/jpeg', 0.72);
+                } catch (err) {
+                    finalDataUrl = rawDataUrl;
                 }
-                canvas.width = w;
-                canvas.height = h;
-                const ctx = canvas.getContext('2d');
-                ctx.drawImage(img, 0, 0, w, h);
-                const dataUrl = canvas.toDataURL('image/jpeg', 0.82);
 
                 const now = new Date();
                 const timeStr = now.toLocaleDateString() + ' ' + now.toLocaleTimeString().slice(0, 5);
-                ws.send(JSON.stringify({
-                    type: 'upload_map',
-                    sender: currentUser,
-                    color: userColor,
-                    target: target,
-                    time: timeStr,
-                    image: dataUrl
-                }));
-                fileInput.value = '';
+                if (ws && ws.readyState === WebSocket.OPEN) {
+                    ws.send(JSON.stringify({
+                        type: 'upload_map',
+                        sender: currentUser,
+                        color: userColor,
+                        target: target,
+                        time: timeStr,
+                        image: finalDataUrl
+                    }));
+                    fileInput.value = '';
+                } else {
+                    alert('Нет связи с сервером! Подождите 2 секунды и нажмите снова.');
+                }
             };
-            img.src = e.target.result;
+
+            img.onerror = function() {
+                const now = new Date();
+                const timeStr = now.toLocaleDateString() + ' ' + now.toLocaleTimeString().slice(0, 5);
+                if (ws && ws.readyState === WebSocket.OPEN) {
+                    ws.send(JSON.stringify({
+                        type: 'upload_map',
+                        sender: currentUser,
+                        color: userColor,
+                        target: target,
+                        time: timeStr,
+                        image: rawDataUrl
+                    }));
+                    fileInput.value = '';
+                }
+            };
+
+            img.src = rawDataUrl;
         };
+
         reader.readAsDataURL(file);
     }
 
@@ -682,6 +717,7 @@
         if (typeof raw === 'string') return Array.of({ id: null, text: raw, sender: ADMIN_NAME, readList: new Array() });
         return Array.of(raw);
     }
+
     function connectWS() {
         if (ws && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING)) return;
         ws = new WebSocket(location.origin.replace(/^http/, 'ws'));
