@@ -1,356 +1,451 @@
 const http = require('http');
 const fs = require('fs');
-const path = require('path');
+const zlib = require('zlib');
 const WebSocket = require('ws');
+const webpush = require('web-push');
 
-let webpush = null;
-try {
-    webpush = require('web-push');
-} catch (e) {
-    console.log('Модуль web-push не найден, работаем через WebSocket');
-}
+const DATA_DIR = fs.existsSync('/data') ? '/data/' : '';
+const DB_FILE = DATA_DIR + 'history.json';
+const NOTIFS_FILE = DATA_DIR + 'notifications.json';
+const SUBS_FILE = DATA_DIR + 'subscriptions.json';
+const VAPID_FILE = DATA_DIR + 'vapid.json';
 
-const DATA_FILE = path.join(__dirname, 'data.json');
-const SUBS_FILE = path.join(__dirname, 'subscriptions.json');
-const VAPID_FILE = path.join(__dirname, 'vapid.json');
-
-let vapidKeys = { publicKey: '', privateKey: '' };
-if (webpush) {
+let vapidKeys;
+if (fs.existsSync(VAPID_FILE)) {
     try {
-        if (fs.existsSync(VAPID_FILE)) {
-            vapidKeys = JSON.parse(fs.readFileSync(VAPID_FILE, 'utf8'));
-        } else {
-            vapidKeys = webpush.generateVAPIDKeys();
-            fs.writeFileSync(VAPID_FILE, JSON.stringify(vapidKeys, null, 2));
-        }
-        webpush.setVapidDetails(
-            'mailto:admin@msb55115.local',
-            vapidKeys.publicKey,
-            vapidKeys.privateKey
-        );
+        vapidKeys = JSON.parse(fs.readFileSync(VAPID_FILE, 'utf8'));
     } catch (e) {
-        console.error('Ошибка VAPID:', e);
+        vapidKeys = webpush.generateVAPIDKeys();
+    }
+} else {
+    vapidKeys = webpush.generateVAPIDKeys();
+    try { fs.writeFileSync(VAPID_FILE, JSON.stringify(vapidKeys)); } catch (e) {}
+}
+
+webpush.setVapidDetails(
+    'mailto:admin@journal.local',
+    vapidKeys.publicKey,
+    vapidKeys.privateKey
+);
+
+let pushSubscriptions = new Array();
+if (fs.existsSync(SUBS_FILE)) {
+    try { 
+        pushSubscriptions = JSON.parse(fs.readFileSync(SUBS_FILE, 'utf8')); 
+    } catch (e) { 
+        pushSubscriptions = new Array(); 
     }
 }
 
-let pushSubscriptions = [];
-try {
-    if (fs.existsSync(SUBS_FILE)) {
-        pushSubscriptions = JSON.parse(fs.readFileSync(SUBS_FILE, 'utf8'));
+function makeTacticalIcon(size) {
+    const crcTable = new Uint32Array(256);
+    for (let n = 0; n < 256; n++) {
+        let c = n;
+        for (let k = 0; k < 8; k++) c = (c & 1) ? (0xedb88320 ^ (c >>> 1)) : (c >>> 1);
+        crcTable.fill(c, n, n + 1);
     }
-} catch (e) {
-    pushSubscriptions = [];
-}
-
-let appData = {
-    tableData: {},
-    rowsData: [],
-    chatMessages: [],
-    history: []
-};
-try {
-    if (fs.existsSync(DATA_FILE)) {
-        const raw = JSON.parse(fs.readFileSync(DATA_FILE, 'utf8'));
-        appData = Object.assign(appData, raw);
+    function crc32(buf) {
+        let c = -1;
+        for (let i = 0; i < buf.length; i++) {
+            const b = buf.readUInt8(i);
+            const idx = (c ^ b) & 0xff;
+            const t = crcTable.subarray(idx, idx + 1).reduce(function(a, v) { return v; }, 0);
+            c = (c >>> 8) ^ t;
+        }
+        return (c ^ -1) >>> 0;
     }
-} catch (e) {
-    console.error('Ошибка чтения data.json:', e);
+    function chunk(type, data) {
+        const len = Buffer.alloc(4); len.writeUInt32BE(data.length, 0);
+        const t = Buffer.from(type, 'ascii');
+        const crc = Buffer.alloc(4); crc.writeUInt32BE(crc32(Buffer.concat(Array.of(t, data))), 0);
+        return Buffer.concat(Array.of(len, t, data, crc));
+    }
+
+    const ihdr = Buffer.alloc(13, 0);
+    ihdr.writeUInt32BE(size, 0); ihdr.writeUInt32BE(size, 4);
+    ihdr.writeUInt8(8, 8); ihdr.writeUInt8(2, 9);
+
+    const rowLen = 1 + size * 3;
+    const raw = Buffer.alloc(size * rowLen, 0);
+    const half = size / 2;
+
+    for (let y = 0; y < size; y++) {
+        const rowOff = y * rowLen;
+        raw.writeUInt8(0, rowOff);
+        for (let x = 0; x < size; x++) {
+            const p = rowOff + 1 + x * 3;
+            const dx = x - half;
+            const dy = y - half;
+            const r = Math.sqrt(dx * dx + dy * dy);
+            let red = 15, green = 23, blue = 42;
+
+            if (r <= half * 0.88) {
+                if (r >= half * 0.82) {
+                    red = 56; green = 189; blue = 248;
+                } else {
+                    red = 30; green = 41; blue = 59;
+                    const c1 = Math.abs(dy - (-half * 0.32 + Math.abs(dx) * 0.75));
+                    const c2 = Math.abs(dy - (-half * 0.05 + Math.abs(dx) * 0.75));
+                    const c3 = Math.abs(dy - (half * 0.22 + Math.abs(dx) * 0.75));
+                    if ((c1 <= size * 0.045 && Math.abs(dx) <= half * 0.52) ||
+                        (c2 <= size * 0.045 && Math.abs(dx) <= half * 0.46) ||
+                        (c3 <= size * 0.045 && Math.abs(dx) <= half * 0.38)) {
+                        red = 250; green = 204; blue = 21;
+                    }
+                }
+            }
+            raw.writeUInt8(red, p);
+            raw.writeUInt8(green, p + 1);
+            raw.writeUInt8(blue, p + 2);
+        }
+    }
+
+    const idat = zlib.deflateSync(raw);
+    const sig = Buffer.from('89504e470d0a1a0a', 'hex');
+    return Buffer.concat(Array.of(sig, chunk('IHDR', ihdr), chunk('IDAT', idat), chunk('IEND', Buffer.alloc(0))));
 }
 
-function saveData() {
-    try {
-        fs.writeFile(DATA_FILE, JSON.stringify(appData), function(err) {
-            if (err) console.error('Ошибка сохранения:', err);
-        });
-    } catch (e) {}
-}
+const TACTICAL_ICON_192 = makeTacticalIcon(192);
+const TACTICAL_ICON_512 = makeTacticalIcon(512);
 
-let activeAlerts = {};
-let currentStreamUrl = '';
-
-const ICON_SVG = [
-    '<svg xmlns="http://w3.org" viewBox="0 0 192 192" width="192" height="192">',
-    '<rect width="192" height="192" rx="36" fill="#0f172a"/>',
-    '<rect x="16" y="16" width="160" height="160" rx="24" fill="#1e293b" stroke="#3b82f6" stroke-width="6"/>',
-    '<text x="96" y="115" font-family="Arial, sans-serif" font-size="64" font-weight="bold" fill="#ffffff" text-anchor="middle">МСБ</text>',
-    '</svg>'
-].join('');
+const MANIFEST_JSON = JSON.stringify({
+    name: "МСБ-55115",
+    short_name: "МСБ55115",
+    start_url: "/",
+    display: "standalone",
+    background_color: "#0f172a",
+    theme_color: "#0f172a",
+    icons: Array.of(
+        { src: "/icon-192.png", sizes: "192x192", type: "image/png", purpose: "any" },
+        { src: "/icon-512.png", sizes: "512x512", type: "image/png", purpose: "any" }
+    )
+});
 const SW_CODE = [
-    "self.addEventListener('install', function(event) { self.skipWaiting(); });",
-    "self.addEventListener('activate', function(event) { event.waitUntil(self.clients.claim()); });",
+    "self.addEventListener('install', function(e) { self.skipWaiting(); });",
+    "self.addEventListener('activate', function(e) { e.waitUntil(clients.claim()); });",
     "self.addEventListener('push', function(event) {",
-    "    let data = { title: 'ВНИМАНИЕ!', body: 'Новое уведомление в журнале МСБ55115' };",
-    "    if (event.data) {",
-    "        try { data = Object.assign(data, event.data.json()); }",
-    "        catch (e) { data.body = event.data.text(); }",
-    "    }",
-    "    const options = {",
+    "    var data = { title: '🛑 СООБЩЕНИЕ В ЖУРНАЛЕ!', body: 'Срочно откройте журнал!' };",
+    "    if (event.data) { try { data = event.data.json(); } catch (e) {} }",
+    "    event.waitUntil(self.registration.showNotification(data.title, {",
     "        body: data.body,",
-    "        icon: '/icon.svg',",
-    "        badge: '/icon.svg',",
-    "        vibrate: [800, 200, 800, 200, 800, 200, 1000],",
+    "        vibrate: Array.of(800, 200, 800, 200, 800, 200, 1000),",
+    "        silent: false,",
     "        requireInteraction: true,",
-    "        tag: data.tag || 'msb-alert-' + Date.now(),",
     "        renotify: true,",
-    "        data: { url: '/' }",
-    "    };",
-    "    event.waitUntil(self.registration.showNotification(data.title, options));",
+    "        tag: 'admin-alert-' + Date.now()",
+    "    }));",
+    "});",
+    "self.addEventListener('message', function(event) {",
+    "    if (event.data && event.data.type === 'SHOW_NOTIFICATION') {",
+    "        self.registration.showNotification(event.data.title, {",
+    "            body: event.data.body,",
+    "            vibrate: Array.of(800, 200, 800, 200, 800, 200, 1000),",
+    "            silent: false,",
+    "            requireInteraction: true,",
+    "            renotify: true,",
+    "            tag: 'admin-alert-' + Date.now()",
+    "        });",
+    "    }",
     "});",
     "self.addEventListener('notificationclick', function(event) {",
     "    event.notification.close();",
-    "    event.waitUntil(",
-    "        clients.matchAll({ type: 'window', includeUncontrolled: true }).then(function(clientList) {",
-    "            for (let i = 0; i < clientList.length; i++) {",
-    "                if ('focus' in clientList[i]) return clientList[i].focus();",
-    "            }",
-    "            if (clients.openWindow) return clients.openWindow('/');",
-    "        })",
-    "    );",
+    "    event.waitUntil(clients.matchAll({ type: 'window', includeUncontrolled: true }).then(function(clientList) {",
+    "        for (var i = 0; i < clientList.length; i++) {",
+    "            var cl = clientList.at(i);",
+    "            if (cl && 'focus' in cl) return cl.focus();",
+    "        }",
+    "        if (clients.openWindow) return clients.openWindow('/');",
+    "    }));",
     "});"
 ].join('\n');
 
 const server = http.createServer(function(req, res) {
-    const urlPath = req.url.split('?')[0];
-
-    if (urlPath === '/manifest.json') {
-        res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
-        res.end(JSON.stringify({
-            name: 'Журнал МСБ55115',
-            short_name: 'МСБ55115',
-            start_url: '/',
-            display: 'standalone',
-            background_color: '#0f172a',
-            theme_color: '#1e293b',
-            icons: [
-                { src: '/icon.svg', sizes: '192x192', type: 'image/svg+xml', purpose: 'any maskable' },
-                { src: '/icon.svg', sizes: '512x512', type: 'image/svg+xml', purpose: 'any maskable' }
-            ]
-        }));
-        return;
-    }
+    const urlPath = (req.url || '/').split('?').at(0);
 
     if (urlPath === '/sw.js') {
-        res.writeHead(200, {
+        res.writeHead(200, { 
             'Content-Type': 'application/javascript; charset=utf-8',
-            'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate'
+            'Cache-Control': 'no-cache, no-store, must-revalidate'
         });
         res.end(SW_CODE);
         return;
     }
-
-    if (urlPath === '/icon.svg') {
-        res.writeHead(200, { 'Content-Type': 'image/svg+xml' });
-        res.end(ICON_SVG);
-        return;
-    }
-
-    if (urlPath === '/vapidPublicKey') {
-        res.writeHead(200, { 'Content-Type': 'text/plain; charset=utf-8' });
-        res.end(vapidKeys.publicKey || '');
-        return;
-    }
-
-    if (urlPath === '/subscribe' && req.method === 'POST') {
-        let body = '';
-        req.on('data', function(chunk) { body += chunk.toString(); });
-        req.on('end', function() {
-            try {
-                const parsed = JSON.parse(body);
-                const sub = parsed.subscription || parsed;
-                const user = parsed.user || 'АДМИН';
-                if (sub && sub.endpoint) {
-                    const idx = pushSubscriptions.findIndex(function(item) {
-                        return item.sub && item.sub.endpoint === sub.endpoint;
-                    });
-                    if (idx !== -1) {
-                        pushSubscriptions[idx] = { sub: sub, user: user };
-                    } else {
-                        pushSubscriptions.push({ sub: sub, user: user });
-                    }
-                    fs.writeFile(SUBS_FILE, JSON.stringify(pushSubscriptions), function() {});
-                    console.log('✅ Телефон подключен к шторке уведомлений: ' + user);
-                }
-                res.writeHead(201, { 'Content-Type': 'application/json' });
-                res.end(JSON.stringify({ status: 'ok' }));
-            } catch (e) {
-                res.writeHead(400);
-                res.end();
-            }
+    if (urlPath === '/manifest.json') {
+        res.writeHead(200, { 
+            'Content-Type': 'application/manifest+json; charset=utf-8',
+            'Cache-Control': 'no-cache, no-store, must-revalidate'
         });
+        res.end(MANIFEST_JSON);
+        return;
+    }
+    if (urlPath === '/icon-192.png' || urlPath === '/favicon.ico') {
+        res.writeHead(200, { 'Content-Type': 'image/png', 'Content-Length': TACTICAL_ICON_192.length });
+        res.end(TACTICAL_ICON_192);
+        return;
+    }
+    if (urlPath === '/icon-512.png') {
+        res.writeHead(200, { 'Content-Type': 'image/png', 'Content-Length': TACTICAL_ICON_512.length });
+        res.end(TACTICAL_ICON_512);
         return;
     }
 
-    if (urlPath === '/' || urlPath === '/index.html') {
-        const indexPath = path.join(__dirname, 'index.html');
-        fs.readFile(indexPath, function(err, content) {
-            if (err) {
-                res.writeHead(500, { 'Content-Type': 'text/plain; charset=utf-8' });
-                res.end('Ошибка загрузки index.html');
-            } else {
-                res.writeHead(200, {
-                    'Content-Type': 'text/html; charset=utf-8',
-                    'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate'
-                });
-                res.end(content);
-            }
-        });
-        return;
-    }
-
-    res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' });
-    res.end('Не найдено');
+    fs.readFile('index.html', function(err, data) {
+        if (err) { 
+            res.writeHead(500); 
+            res.end('Error loading index.html'); 
+        } else { 
+            res.writeHead(200, { 
+                'Content-Type': 'text/html; charset=utf-8',
+                'Cache-Control': 'no-store, no-cache, must-revalidate, max-age=0'
+            }); 
+            res.end(data); 
+        }
+    });
 });
+
 const wss = new WebSocket.Server({ server: server });
 
-function broadcastAll(dataObj, excludeWs) {
-    const raw = JSON.stringify(dataObj);
+let tableHistory = new Array(); 
+let notificationsHistory = new Array();
+let activeAlerts = {}; 
+let streamState = { active: false, url: '' };
+
+if (fs.existsSync(DB_FILE)) {
+    try { 
+        const fileContent = fs.readFileSync(DB_FILE, 'utf8');
+        tableHistory = fileContent.trim() ? JSON.parse(fileContent) : new Array();
+    } catch (e) { 
+        tableHistory = new Array(); 
+    }
+}
+
+if (fs.existsSync(NOTIFS_FILE)) {
+    try {
+        const notifContent = fs.readFileSync(NOTIFS_FILE, 'utf8');
+        notificationsHistory = notifContent.trim() ? JSON.parse(notifContent) : new Array();
+        notificationsHistory.forEach(function(n) {
+            if (!n.read) {
+                if (!Array.isArray(activeAlerts[n.target])) activeAlerts[n.target] = new Array();
+                activeAlerts[n.target].push({ id: n.id, text: n.text, sender: n.sender });
+            }
+        });
+    } catch (e) {
+        notificationsHistory = new Array();
+    }
+}
+function broadcastAlert(sender, color, timeStr, target, text) {
+    const notifId = Date.now() + Math.floor(Math.random() * 1000);
+    const newNotif = {
+        id: notifId,
+        time: timeStr,
+        sender: sender,
+        color: color,
+        target: target,
+        text: text,
+        read: false,
+        readBy: ''
+    };
+
+    notificationsHistory.push(newNotif);
+    if (notificationsHistory.length > 200) {
+        notificationsHistory = notificationsHistory.slice(-200);
+    }
+    fs.writeFile(NOTIFS_FILE, JSON.stringify(notificationsHistory), function() {});
+
+    if (!Array.isArray(activeAlerts[target])) {
+        activeAlerts[target] = new Array();
+    }
+    activeAlerts[target].push({
+        id: notifId,
+        text: text,
+        sender: sender
+    });
+
     wss.clients.forEach(function(client) {
-        if (client !== excludeWs && client.readyState === WebSocket.OPEN) {
-            client.send(raw);
+        if (client.readyState === WebSocket.OPEN) {
+            client.send(JSON.stringify({
+                type: 'admin_alert',
+                sender: sender,
+                target: target,
+                text: text,
+                notif: newNotif
+            }));
+        }
+    });
+
+    const payload = JSON.stringify({
+        title: '🛑 СООБЩЕНИЕ ДЛЯ [' + target + ']!',
+        body: sender + ': ' + text
+    });
+
+    const pushOptions = { TTL: 3600, headers: { 'Urgency': 'high' } };
+
+    pushSubscriptions.forEach(function(item, index) {
+        if (target === 'ВСЕМ' || item.user === target) {
+            webpush.sendNotification(item.sub, payload, pushOptions)
+                .catch(function(err) {
+                    if (err.statusCode === 410 || err.statusCode === 404) {
+                        pushSubscriptions.splice(index, 1);
+                        fs.writeFile(SUBS_FILE, JSON.stringify(pushSubscriptions), function() {});
+                    }
+                });
         }
     });
 }
 
 wss.on('connection', function(ws) {
-    try {
-        ws.send(JSON.stringify({
-            type: 'init',
-            data: appData,
-            tableData: appData.tableData,
-            rowsData: appData.rowsData,
-            chatMessages: appData.chatMessages,
-            activeAlerts: activeAlerts,
-            vapidPublicKey: vapidKeys.publicKey,
-            streamUrl: currentStreamUrl
-        }));
-
-        if (currentStreamUrl) {
-            ws.send(JSON.stringify({
-                type: 'stream_url',
-                url: currentStreamUrl,
-                forceOpen: false
-            }));
-        }
-    } catch (e) {}
+    ws.send(JSON.stringify({ 
+        type: 'init', 
+        data: tableHistory, 
+        notifications: notificationsHistory,
+        alerts: activeAlerts,
+        streamState: streamState,
+        vapidPublicKey: vapidKeys.publicKey 
+    }));
 
     ws.on('message', function(message) {
         try {
             const msg = JSON.parse(message.toString());
 
-            if (msg.type === 'update' || msg.type === 'cell_update' || msg.type === 'table_update' || msg.type === 'save_data' || msg.type === 'full_sync') {
-                if (msg.data !== undefined) {
-                    if (typeof msg.data === 'object' && !Array.isArray(msg.data)) {
-                        appData = Object.assign(appData, msg.data);
-                    } else {
-                        appData.rowsData = msg.data;
-                    }
-                }
-                if (msg.tableData !== undefined) appData.tableData = msg.tableData;
-                if (msg.rowsData !== undefined) appData.rowsData = msg.rowsData;
-                if (msg.id !== undefined && msg.value !== undefined) {
-                    if (!appData.tableData) appData.tableData = {};
-                    appData.tableData[msg.id] = msg.value;
-                }
-                saveData();
-                broadcastAll(msg, ws);
+            if (msg.type === 'ping') {
+                ws.send(JSON.stringify({ type: 'pong' }));
+                return;
             }
-            else if (msg.type === 'chat' || msg.type === 'new_message') {
-                if (!Array.isArray(appData.chatMessages)) appData.chatMessages = [];
-                appData.chatMessages.push(msg.message || msg);
-                if (appData.chatMessages.length > 200) appData.chatMessages.shift();
-                saveData();
-                broadcastAll(msg, null);
-            }
-            else if (msg.type === 'push_subscribe' || msg.type === 'register_push') {
-                const sub = msg.subscription || msg.sub;
-                const user = msg.user || 'АДМИН';
-                if (sub && sub.endpoint) {
-                    const idx = pushSubscriptions.findIndex(function(item) {
-                        return item.sub && item.sub.endpoint === sub.endpoint;
-                    });
-                    if (idx !== -1) {
-                        pushSubscriptions[idx] = { sub: sub, user: user };
-                    } else {
-                        pushSubscriptions.push({ sub: sub, user: user });
-                    }
-                    fs.writeFile(SUBS_FILE, JSON.stringify(pushSubscriptions), function() {});
-                    console.log('✅ Телефон подключен к шторке уведомлений: ' + user);
-                }
-            }
-            else if (msg.type === 'alert' || msg.type === 'send_alert' || msg.type === 'notify') {
-                const target = msg.target || 'ВСЕ';
-                const text = msg.text || msg.message || 'Внимание! Проверьте журнал!';
-                const sender = msg.sender || msg.from || 'АДМИН';
 
-                activeAlerts[target] = { target: target, text: text, sender: sender, time: Date.now() };
+            if (msg.type === 'save_sub' && msg.sub) {
+                const idx = pushSubscriptions.findIndex(function(s) { return s.sub.endpoint === msg.sub.endpoint; });
+                if (idx !== -1) {
+                    pushSubscriptions.at(idx).user = msg.user;
+                } else {
+                    pushSubscriptions.push({ user: msg.user, sub: msg.sub });
+                }
+                fs.writeFile(SUBS_FILE, JSON.stringify(pushSubscriptions), function() {});
+                return;
+            }
+
+            if (msg.type === 'add_row') {
+                const newRow = {
+                    id: Date.now(),
+                    time: msg.time,
+                    user: msg.user,
+                    values: msg.values,
+                    color: msg.color
+                };
+                tableHistory.push(newRow);
+                fs.writeFile(DB_FILE, JSON.stringify(tableHistory), function() {});
 
                 wss.clients.forEach(function(client) {
                     if (client.readyState === WebSocket.OPEN) {
-                        client.send(JSON.stringify({ type: 'alert', target: target, text: text, sender: sender }));
+                        client.send(JSON.stringify({ type: 'new_row', row: newRow }));
                     }
                 });
+            }
 
-                if (webpush && pushSubscriptions.length > 0) {
-                    const payload = JSON.stringify({
-                        title: '🚨 ' + sender + ' -> ' + target,
-                        body: text,
-                        tag: 'alert-' + target
-                    });
-                    const pushOptions = { TTL: 86400, urgency: 'high' };
+            if (msg.type === 'stream_start') {
+                streamState = { active: true, url: msg.url };
+                wss.clients.forEach(function(client) {
+                    if (client.readyState === WebSocket.OPEN) {
+                        client.send(JSON.stringify({ type: 'stream_state', streamState: streamState }));
+                    }
+                });
+                const now = new Date();
+                const timeStr = msg.time || (now.toLocaleDateString() + ' ' + now.toLocaleTimeString().slice(0, 5));
+                broadcastAlert(msg.sender || 'АДМИН', msg.color || '#ef4444', timeStr, 'ВСЕМ', '🎥 НАЧАЛСЯ ВИДЕОСТРИМ МСБ-55115! Нажмите кнопку "ПЕРЕЙТИ ПО ССЫЛКЕ"');
+            }
 
-                    pushSubscriptions.forEach(function(item, index) {
-                        const isForAll = (target === 'ВСЕ' || target === 'ALL' || !target);
-                        const isExactTarget = (item.user === target || item.user === 'АДМИН');
+            if (msg.type === 'stream_stop') {
+                streamState = { active: false, url: '' };
+                wss.clients.forEach(function(client) {
+                    if (client.readyState === WebSocket.OPEN) {
+                        client.send(JSON.stringify({ type: 'stream_state', streamState: streamState }));
+                    }
+                });
+            }
 
-                        if (isForAll || isExactTarget) {
-                            webpush.sendNotification(item.sub, payload, pushOptions)
-                                .then(function() { console.log('---> Доставлено в шторку (' + (item.user || 'Гость') + ')'); })
-                                .catch(function(err) {
-                                    if (err.statusCode === 410 || err.statusCode === 404) {
-                                        pushSubscriptions.splice(index, 1);
-                                        fs.writeFile(SUBS_FILE, JSON.stringify(pushSubscriptions), function() {});
-                                    }
-                                });
+            if (msg.type === 'clear_history') {
+                tableHistory = new Array();
+                notificationsHistory = new Array();
+                activeAlerts = {};
+                fs.writeFile(DB_FILE, JSON.stringify(tableHistory), function() {});
+                fs.writeFile(NOTIFS_FILE, JSON.stringify(notificationsHistory), function() {});
+
+                wss.clients.forEach(function(client) {
+                    if (client.readyState === WebSocket.OPEN) {
+                        client.send(JSON.stringify({ type: 'history_cleared' }));
+                    }
+                });
+            }
+
+            if (msg.type === 'admin_alert') {
+                const sender = msg.sender || 'АДМИН';
+                const color = msg.color || '#ef4444';
+                const now = new Date();
+                const timeStr = msg.time || (now.toLocaleDateString() + ' ' + now.toLocaleTimeString().slice(0, 5));
+                broadcastAlert(sender, color, timeStr, msg.target, msg.text);
+            }
+
+            if (msg.type === 'clear_alert') {
+                const now = new Date();
+                const tStr = msg.readTime || now.toLocaleTimeString().slice(0, 5);
+                const whoStr = msg.readBy || 'Просмотр';
+                const stamp = whoStr + ' ' + tStr;
+
+                if (Array.isArray(activeAlerts[msg.target])) {
+                    if (msg.target === 'ВСЕМ') {
+                        activeAlerts[msg.target].forEach(function(a) {
+                            if (!msg.notifId || a.id === msg.notifId) {
+                                if (!Array.isArray(a.readList)) a.readList = new Array();
+                                if (a.readList.indexOf(whoStr) === -1) a.readList.push(whoStr);
+                            }
+                        });
+                    } else {
+                        if (msg.notifId) {
+                            activeAlerts[msg.target] = activeAlerts[msg.target].filter(function(a) { return a.id !== msg.notifId; });
+                        } else {
+                            activeAlerts[msg.target].shift();
                         }
-                    });
+                        if (activeAlerts[msg.target].length === 0) {
+                            delete activeAlerts[msg.target];
+                        }
+                    }
+                } else {
+                    delete activeAlerts[msg.target];
                 }
-            }
-            else if (msg.type === 'clear_alert') {
-                delete activeAlerts[msg.target];
-                wss.clients.forEach(function(client) {
-                    if (client.readyState === WebSocket.OPEN) {
-                        client.send(JSON.stringify({ type: 'alert_cleared', target: msg.target }));
+
+                let updatedReadBy = stamp;
+                let marked = false;
+                notificationsHistory.forEach(function(n) {
+                    const match = (msg.notifId && n.id === msg.notifId) || (!msg.notifId && !marked && n.target === msg.target);
+                    if (match) {
+                        n.read = true;
+                        if (n.target === 'ВСЕМ') {
+                            if (!n.readBy) {
+                                n.readBy = stamp;
+                            } else if (n.readBy.indexOf(whoStr) === -1) {
+                                n.readBy = n.readBy + ', ' + stamp;
+                            }
+                        } else {
+                            n.readBy = stamp;
+                        }
+                        updatedReadBy = n.readBy;
+                        marked = true;
                     }
                 });
-            }
-            else if (msg.type === 'set_stream') {
-                currentStreamUrl = msg.url || '';
-                console.log('📡 Видеострим обновлен админом: ' + (currentStreamUrl || 'ОСТАНОВЛЕН'));
+                fs.writeFile(NOTIFS_FILE, JSON.stringify(notificationsHistory), function() {});
+
                 wss.clients.forEach(function(client) {
                     if (client.readyState === WebSocket.OPEN) {
                         client.send(JSON.stringify({
-                            type: 'stream_url',
-                            url: currentStreamUrl,
-                            forceOpen: msg.forceOpen || false
+                            type: 'alert_cleared',
+                            target: msg.target,
+                            notifId: msg.notifId || null,
+                            who: whoStr,
+                            readBy: updatedReadBy
                         }));
                     }
                 });
             }
-            else if (msg.type === 'get_stream') {
-                if (currentStreamUrl) {
-                    ws.send(JSON.stringify({
-                        type: 'stream_url',
-                        url: currentStreamUrl,
-                        forceOpen: false
-                    }));
-                }
-            }
-            else {
-                broadcastAll(msg, ws);
-            }
-        } catch (e) {
-            console.error('Ошибка:', e);
-        }
+        } catch (e) { console.error("Ошибка:", e); }
     });
 });
 
