@@ -47,7 +47,7 @@
         .stream-start-btn { padding: 12px 18px; background: #22c55e; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; }
         .stream-stop-btn { padding: 12px 18px; background: var(--danger); color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; }
         .stream-link-btn { width: 100%; padding: 14px; background: #2563eb; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; }
-        .maps-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-top: 12px; }
+                .maps-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-top: 12px; }
         .map-tile { position: relative; height: 190px; border-radius: 14px; overflow: hidden; background: #090d16; border: 1px solid #334155; cursor: pointer; transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.28s ease, border-color 0.28s ease; box-shadow: 0 6px 18px rgba(0,0,0,0.45); -webkit-tap-highlight-color: transparent; }
         .map-tile:hover, .map-tile:active { transform: translateY(-5px) scale(1.02); border-color: #38bdf8; box-shadow: 0 14px 30px rgba(56, 189, 248, 0.35); }
         .map-tile img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform 0.4s ease; }
@@ -56,8 +56,17 @@
         .map-tile-time { color: #facc15; font-family: monospace; font-size: 12px; font-weight: bold; }
         .map-tile-target { background: rgba(59, 130, 246, 0.85); color: white; padding: 2px 8px; border-radius: 6px; font-size: 11px; font-weight: bold; }
         .map-tile-fresh { position: absolute; top: 10px; left: 10px; background: #22c55e; color: #052e16; font-size: 10px; font-weight: 900; padding: 3px 8px; border-radius: 999px; box-shadow: 0 2px 8px rgba(0,0,0,0.5); }
-        #photo-lightbox { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(9, 13, 22, 0.96); z-index: 150000; flex-direction: column; justify-content: center; align-items: center; padding: 15px; box-sizing: border-box; }
-        #photo-lightbox img { max-width: 96%; max-height: 82vh; border-radius: 12px; border: 2px solid #38bdf8; box-shadow: 0 0 40px rgba(56, 189, 248, 0.3); object-fit: contain; }
+        #photo-lightbox { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(9, 13, 22, 0.98); z-index: 150000; flex-direction: column; box-sizing: border-box; user-select: none; }
+        .lb-toolbar { width: 100%; padding: 10px 15px; background: #1e293b; border-bottom: 1px solid #334155; display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; box-sizing: border-box; z-index: 5; }
+        .lb-controls { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+        .lb-btn { padding: 8px 14px; background: #334155; color: white; border: 1px solid #475569; border-radius: 6px; font-weight: bold; font-size: 14px; cursor: pointer; }
+        .lb-btn:active { background: #3b82f6; }
+        .lb-viewport { flex-grow: 1; width: 100%; overflow: hidden; position: relative; display: flex; justify-content: center; align-items: center; touch-action: none; cursor: grab; }
+        .lb-viewport:active { cursor: grabbing; }
+        #lightbox-img { max-width: 92%; max-height: 82vh; object-fit: contain; transform-origin: center center; transition: transform 0.08s ease-out; pointer-events: none; border: 1px solid #334155; border-radius: 6px; }
+        #stream-page { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #0f172a; z-index: 140000; flex-direction: column; box-sizing: border-box; }
+        .stream-page-header { width: 100%; padding: 12px 16px; background: #1e293b; border-bottom: 2px solid #3b82f6; display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; box-sizing: border-box; }
+        #stream-iframe { flex-grow: 1; width: 100%; border: none; background: #090d16; }
         #admin-zone { display: none; margin-top: 30px; padding: 20px; border: 2px solid var(--danger); border-radius: 10px; background: rgba(239, 68, 68, 0.1); }
         .admin-controls { display: flex; gap: 10px; }
         .admin-controls select { width: 200px; padding: 12px; border-radius: 6px; border: none; font-size: 16px; }
@@ -106,10 +115,28 @@
             </div>
         </div>
     </div>
-    <div id="photo-lightbox" onclick="closePhotoLightbox()">
-        <img id="lightbox-img" src="" alt="Карта">
-        <div id="lightbox-caption" style="color:#f8fafc; margin-top:12px; font-weight:bold; font-size:15px;"></div>
-        <button type="button" style="margin-top:12px; padding:10px 24px; background:#ef4444; color:white; border:none; border-radius:8px; font-weight:bold; cursor:pointer;">✖ ЗАКРЫТЬ</button>
+    <div id="photo-lightbox">
+        <div class="lb-toolbar">
+            <div id="lightbox-caption" style="color:#f8fafc; font-weight:bold; font-size:14px;">Карта</div>
+            <div class="lb-controls">
+                <button type="button" class="lb-btn" onclick="changePhotoZoom(-0.5)">➖</button>
+                <span id="zoom-level-label" style="color:#38bdf8; font-family:monospace; font-weight:bold; min-width:52px; text-align:center;">100%</span>
+                <button type="button" class="lb-btn" onclick="changePhotoZoom(0.5)">➕</button>
+                <button type="button" class="lb-btn" onclick="resetPhotoZoom()">🔄 Сброс</button>
+                <button type="button" class="lb-btn" style="background:#ef4444; border-color:#ef4444;" onclick="closePhotoLightbox()">✖ ЗАКРЫТЬ</button>
+            </div>
+        </div>
+        <div class="lb-viewport" id="lb-viewport">
+            <img id="lightbox-img" src="" alt="Карта">
+        </div>
+    </div>
+    <div id="stream-page">
+        <div class="stream-page-header">
+            <button type="button" class="lb-btn" style="background:#2563eb; border-color:#3b82f6;" onclick="closeStreamPage()">⬅️ НАЗАД В ЖУРНАЛ</button>
+            <span style="color:#f8fafc; font-weight:bold; font-size:15px;">🎥 ВИДЕОСТРИМ МСБ-55115</span>
+            <button type="button" class="lb-btn" style="background:#10b981; border-color:#059669;" onclick="openStreamExternalFallback()">↗️ Развернуть (если не грузит)</button>
+        </div>
+        <iframe id="stream-iframe" src="about:blank" allow="camera; microphone; fullscreen; display-capture; autoplay"></iframe>
     </div>
     <div id="alert-modal">
         <div class="alert-content">
@@ -132,6 +159,7 @@
             <div id="login-error" style="color: #ef4444; font-size: 14px; margin-top: 10px; display: none;">❌ Неверный пароль</div>
         </div>
     </div>
+
     <div class="input-panel" id="input-panel">
         <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:15px;">
             <h3 style="margin:0;">📝 ПОДРАЗДЕЛЕНИЕ: <span id="my-name"></span></h3>
@@ -432,6 +460,7 @@
             navigator.wakeLock.request('screen').catch(function() {});
         }
     }
+   
     function updateLockScreenAlert(target, text, sender) {
         if ('mediaSession' in navigator) {
             navigator.mediaSession.metadata = new MediaMetadata({
@@ -467,17 +496,38 @@
             box.style.display = (box.style.display === 'block') ? 'none' : 'block';
         } else {
             if (activeStream && activeStream.active && activeStream.url) {
-                const uBox = document.getElementById('user-stream-box');
-                uBox.style.display = (uBox.style.display === 'block') ? 'none' : 'block';
+                openActiveStreamWindow();
             } else {
                 alert('Видеострим сейчас не запущен администратором.');
             }
         }
     }
 
+    function openStreamInAppPage(url) {
+        if (!url) return;
+        const page = document.getElementById('stream-page');
+        const iframe = document.getElementById('stream-iframe');
+        if (page && iframe) {
+            iframe.src = url;
+            page.style.display = 'flex';
+        }
+    }
+
+    function closeStreamPage() {
+        const page = document.getElementById('stream-page');
+        const iframe = document.getElementById('stream-iframe');
+        if (page) page.style.display = 'none';
+        if (iframe) iframe.src = 'about:blank';
+    }
+
+    function openStreamExternalFallback() {
+        const url = (activeStream && activeStream.url) ? activeStream.url : document.getElementById('stream-url-input').value.trim();
+        if (url) window.location.href = url;
+    }
+
     function openActiveStreamWindow() {
         if (activeStream && activeStream.url) {
-            window.open(activeStream.url, '_blank', 'noopener,noreferrer,width=1100,height=750');
+            openStreamInAppPage(activeStream.url);
         }
     }
 
@@ -494,12 +544,13 @@
             color: userColor,
             time: timeString
         }));
-        window.open(url, '_blank', 'noopener,noreferrer,width=1100,height=750');
+        openStreamInAppPage(url);
     }
 
     function stopVideoStream() {
         if (currentUser !== ADMIN_NAME) return;
         ws.send(JSON.stringify({ type: 'stream_stop' }));
+        closeStreamPage();
     }
     function updateStreamUI() {
         const mainBtn = document.getElementById('stream-main-btn');
@@ -544,6 +595,66 @@
         return false;
     }
 
+    let photoZoom = 1;
+    let photoPanX = 0;
+    let photoPanY = 0;
+    let isDraggingPhoto = false;
+    let dragStartX = 0;
+    let dragStartY = 0;
+    let zoomEventsBound = false;
+
+    function applyPhotoTransform() {
+        const img = document.getElementById('lightbox-img');
+        const lbl = document.getElementById('zoom-level-label');
+        if (img) {
+            img.style.transform = 'translate(' + photoPanX + 'px, ' + photoPanY + 'px) scale(' + photoZoom + ')';
+        }
+        if (lbl) lbl.innerText = Math.round(photoZoom * 100) + '%';
+    }
+
+    function changePhotoZoom(delta) {
+        photoZoom = Math.min(5, Math.max(1, photoZoom + delta));
+        if (photoZoom === 1) { photoPanX = 0; photoPanY = 0; }
+        applyPhotoTransform();
+    }
+
+    function resetPhotoZoom() {
+        photoZoom = 1;
+        photoPanX = 0;
+        photoPanY = 0;
+        applyPhotoTransform();
+    }
+
+    function bindPhotoZoomEvents() {
+        if (zoomEventsBound) return;
+        zoomEventsBound = true;
+        const vp = document.getElementById('lb-viewport');
+        if (!vp) return;
+
+        vp.addEventListener('wheel', function(e) {
+            e.preventDefault();
+            changePhotoZoom(e.deltaY < 0 ? 0.35 : -0.35);
+        }, { passive: false });
+
+        vp.addEventListener('pointerdown', function(e) {
+            if (photoZoom <= 1) return;
+            isDraggingPhoto = true;
+            dragStartX = e.clientX - photoPanX;
+            dragStartY = e.clientY - photoPanY;
+            vp.setPointerCapture(e.pointerId);
+        });
+
+        vp.addEventListener('pointermove', function(e) {
+            if (!isDraggingPhoto) return;
+            photoPanX = e.clientX - dragStartX;
+            photoPanY = e.clientY - dragStartY;
+            applyPhotoTransform();
+        });
+
+        vp.addEventListener('pointerup', function() { isDraggingPhoto = false; });
+        vp.addEventListener('pointercancel', function() { isDraggingPhoto = false; });
+    }
+
     function openPhotoLightbox(src, caption) {
         const lb = document.getElementById('photo-lightbox');
         const img = document.getElementById('lightbox-img');
@@ -551,6 +662,8 @@
         if (lb && img) {
             img.src = src;
             if (cap) cap.innerText = caption || '';
+            resetPhotoZoom();
+            bindPhotoZoomEvents();
             lb.style.display = 'flex';
         }
     }
@@ -589,84 +702,53 @@
             grid.appendChild(tile);
         });
     }
+
+
+    
+
     function uploadMapPhoto() {
         if (currentUser !== ADMIN_NAME) return;
         const fileInput = document.getElementById('map-file-input');
         const targetSelect = document.getElementById('map-target-select');
         if (!fileInput || !fileInput.files || fileInput.files.length === 0) {
-            return alert('Сначала выберите фотографию или карту!');
+            return alert('Выберите фотографию или карту на устройстве!');
         }
-        const file = fileInput.files.item(0);
-        if (!file) return alert('Не удалось прочитать файл!');
-
-        const target = (targetSelect && targetSelect.value) ? targetSelect.value : 'ВСЕМ';
+        const file = fileInput.files.at(0);
+        const target = targetSelect ? targetSelect.value : 'ВСЕМ';
         const reader = new FileReader();
 
-        reader.onerror = function() {
-            alert('Ошибка чтения файла с устройства!');
-        };
-
         reader.onload = function(e) {
-            const rawDataUrl = e.target.result;
             const img = new Image();
-
             img.onload = function() {
-                let finalDataUrl = rawDataUrl;
-                try {
-                    const canvas = document.createElement('canvas');
-                    const maxW = 900;
-                    const maxH = 900;
-                    let w = img.width || 800;
-                    let h = img.height || 600;
-                    if (w > maxW || h > maxH) {
-                        if (w > h) { h = Math.round(h * (maxW / w)); w = maxW; }
-                        else { w = Math.round(w * (maxH / h)); h = maxH; }
-                    }
-                    canvas.width = w;
-                    canvas.height = h;
-                    const ctx = canvas.getContext('2d');
-                    ctx.drawImage(img, 0, 0, w, h);
-                    finalDataUrl = canvas.toDataURL('image/jpeg', 0.72);
-                } catch (err) {
-                    finalDataUrl = rawDataUrl;
+                const canvas = document.createElement('canvas');
+                const maxW = 1280;
+                const maxH = 1280;
+                let w = img.width;
+                let h = img.height;
+                if (w > maxW || h > maxH) {
+                    if (w > h) { h = Math.round(h * (maxW / w)); w = maxW; }
+                    else { w = Math.round(w * (maxH / h)); h = maxH; }
                 }
+                canvas.width = w;
+                canvas.height = h;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, w, h);
+                const dataUrl = canvas.toDataURL('image/jpeg', 0.82);
 
                 const now = new Date();
                 const timeStr = now.toLocaleDateString() + ' ' + now.toLocaleTimeString().slice(0, 5);
-                if (ws && ws.readyState === WebSocket.OPEN) {
-                    ws.send(JSON.stringify({
-                        type: 'upload_map',
-                        sender: currentUser,
-                        color: userColor,
-                        target: target,
-                        time: timeStr,
-                        image: finalDataUrl
-                    }));
-                    fileInput.value = '';
-                } else {
-                    alert('Нет связи с сервером! Подождите 2 секунды и нажмите снова.');
-                }
+                ws.send(JSON.stringify({
+                    type: 'upload_map',
+                    sender: currentUser,
+                    color: userColor,
+                    target: target,
+                    time: timeStr,
+                    image: dataUrl
+                }));
+                fileInput.value = '';
             };
-
-            img.onerror = function() {
-                const now = new Date();
-                const timeStr = now.toLocaleDateString() + ' ' + now.toLocaleTimeString().slice(0, 5);
-                if (ws && ws.readyState === WebSocket.OPEN) {
-                    ws.send(JSON.stringify({
-                        type: 'upload_map',
-                        sender: currentUser,
-                        color: userColor,
-                        target: target,
-                        time: timeStr,
-                        image: rawDataUrl
-                    }));
-                    fileInput.value = '';
-                }
-            };
-
-            img.src = rawDataUrl;
+            img.src = e.target.result;
         };
-
         reader.readAsDataURL(file);
     }
 
@@ -717,7 +799,6 @@
         if (typeof raw === 'string') return Array.of({ id: null, text: raw, sender: ADMIN_NAME, readList: new Array() });
         return Array.of(raw);
     }
-
     function connectWS() {
         if (ws && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING)) return;
         ws = new WebSocket(location.origin.replace(/^http/, 'ws'));
