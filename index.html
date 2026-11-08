@@ -173,7 +173,6 @@
             <tbody id="table-body"></tbody>
         </table>
     </div>
-
 <script>
     const USERS_CONFIG = [
         { name: "ШР", pass: "551151111", color: "#3b82f6" },
@@ -201,16 +200,16 @@
         ]},
         { label: "НОМЕР ТОЧКИ", options: new Array(), digitsOnly: true },
         { label: "ЛЕСОПОЛОСА", options: [
-            "ФАКС", "ЗУБР1", "ПОЭТ","ЗАЯЦ", "СУДЬЯ", "СОР4", "ЗАМЕНА", "КРАСКА",
-            "МАСТАК1", "ВОЛК3", "АНГЕЛ", "ВАЛИК1", "ЛЕЖАК","СМОГ-1", "ЛОТ ", "ПРИНТ7",
+            "ФАКС", "ЗУБР1", "ПОЭТ", "СУДЬЯ", "СОР4", "ЗАМЕНА", "КРАСКА",
+            "МАСТАК1", "ВОЛК3", "АНГЕЛ", "ВАЛИК1", "ЛЕЖАК", "ЛОТ ", "ПРИНТ7",
             "ГОН1", "СТОП-3", "ТАБЛА", "ПОКЕР", "ЛОКОН", "КАЛЫМ", "КАРМАН1",
             "ИРБИС", "СЕЗОН", "КАРАЗ", "КВАС", "КАФР", "СТЕНА", "ТРАКТ",
             "СЛЕЖКА", "МОНАРХ", "ГИК", "МУРАЛ", "ГРЕК", "БАКУ", "БАКУ-1",
             "САЛАТ", "САЛАТ-1", "ГУК", "СМЕНА-1", "КАБАН", "КАБАН-2",
             "КАБАН-3", "ЛИС-1", "ЛИС-2", "ЛИС-3",
-            "-->ФАКС", "-->ЗУБР1", "-->ПОЭТ","-->ЗАЯЦ","-->СУДЬЯ", "-->СОР4",
+            "-->ФАКС", "-->ЗУБР1", "-->ПОЭТ", "-->СУДЬЯ", "-->СОР4",
             "-->ЗАМЕНА", "-->КРАСКА", "-->МАСТАК1", "-->ВОЛК3", "-->АНГЕЛ",
-            "-->ВАЛИК1", "-->ЛЕЖАК","-->СМОГ-1", "-->ЛОТ ", "-->ПРИНТ7", "-->ГОН1",
+            "-->ВАЛИК1", "-->ЛЕЖАК", "-->ЛОТ ", "-->ПРИНТ7", "-->ГОН1",
             "-->СТОП-3", "-->ТАБЛА", "-->ПОКЕР", "-->ЛОКОН", "-->КАЛЫМ",
             "-->КАРМАН1", "-->ИРБИС", "-->СЕЗОН", "-->КАРАЗ", "-->КВАС",
             "-->КАФР", "-->СТЕНА", "-->ТРАКТ", "-->СЛЕЖКА", "-->МОНАРХ",
@@ -542,10 +541,10 @@
         const raw = pendingAlerts[target];
         if (!raw) return new Array();
         if (Array.isArray(raw)) return raw;
-        if (typeof raw === 'string') return Array.of({ id: null, text: raw, sender: ADMIN_NAME });
+        if (typeof raw === 'string') return Array.of({ id: null, text: raw, sender: ADMIN_NAME, readList: new Array() });
         return Array.of(raw);
     }
-      function connectWS() {
+    function connectWS() {
         if (ws && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING)) return;
         ws = new WebSocket(location.origin.replace(/^http/, 'ws'));
 
@@ -678,6 +677,113 @@
                 adminSelect.appendChild(opt2);
             }
         });
+    }
+    function applyUserUI() {
+        document.getElementById('login-overlay').style.display = 'none';
+        document.getElementById('input-panel').style.display = 'block';
+        document.getElementById('my-name').innerText = currentUser;
+        document.getElementById('my-name').style.color = userColor;
+        
+        document.getElementById('admin-zone').style.display = 'block';
+        populateTargetSelect();
+        renderNotificationsWindow();
+        updateStreamUI();
+
+        if (currentUser === ADMIN_NAME) {
+            document.getElementById('clear-history-box').style.display = 'block';
+        } else {
+            document.getElementById('clear-history-box').style.display = 'none';
+            document.getElementById('admin-stream-box').style.display = 'none';
+        }
+    }
+
+    function initApp() {
+        runSplash();
+        document.getElementById('login-error').style.display = 'none';
+
+        if (window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true) {
+            document.querySelectorAll('.pwa-install-btn').forEach(function(btn) {
+                btn.style.display = 'none';
+            });
+        }
+
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/sw.js').catch(function() {});
+        }
+
+        document.body.addEventListener('click', function firstTouch() {
+            unlockMobileFeatures();
+            subscribeToWebPush();
+            document.body.removeEventListener('click', firstTouch);
+        }, { once: true });
+
+        const loginSelect = document.getElementById('login-select');
+        loginSelect.innerHTML = '';
+
+        USERS_CONFIG.forEach(function(u, index) {
+            let opt = document.createElement('option');
+            opt.value = index; opt.innerText = u.name;
+            loginSelect.appendChild(opt);
+        });
+
+        const headerRow = document.getElementById('table-headers');
+        const inputContainer = document.getElementById('dynamic-inputs');
+        
+        headerRow.innerHTML = '<th style="width: 130px;">🕒 Время</th><th style="width: 110px;">👤 Кто</th>';
+        inputContainer.innerHTML = '';
+
+        COLUMNS_CONFIG.forEach(function(col, index) {
+            let th = document.createElement('th'); 
+            th.innerText = col.label; 
+            headerRow.appendChild(th);
+            
+            let div = document.createElement('div'); 
+            div.className = 'field-group';
+            let inputHtml = '';
+
+            if (col.options && col.options.length > 0) {
+                let opts = col.options.map(function(o) { return '<option>' + o + '</option>'; }).join('');
+                inputHtml = '<select id="in-' + index + '"><option value="" disabled selected>-</option>' + opts + '</select>';
+            } else if (col.digitsOnly) {
+                inputHtml = '<input type="text" id="in-' + index + '" placeholder="Цифры, дробь, слэш..." oninput="this.value = this.value.replace(/[^0-9.,\\/\\\\]/g, \'\')">';
+            } else {
+                inputHtml = '<input type="text" id="in-' + index + '" placeholder="...">';
+            }
+            div.innerHTML = '<label>' + col.label + '</label>' + inputHtml;
+            inputContainer.appendChild(div);
+        });
+
+        const savedUser = localStorage.getItem('journal_user');
+        const savedColor = localStorage.getItem('journal_color');
+        if (savedUser) {
+            currentUser = savedUser;
+            userColor = savedColor || '#fff';
+            applyUserUI();
+        }
+        connectWS();
+    }
+    
+    initApp();
+
+    function attemptLogin() {
+        unlockMobileFeatures();
+        const userIndex = Number(document.getElementById('login-select').value);
+        const pass = document.getElementById('login-pass').value.trim();
+        const user = USERS_CONFIG.at(userIndex);
+
+        if (user && pass === user.pass) {
+            document.getElementById('login-error').style.display = 'none';
+            currentUser = user.name;
+            userColor = user.color;
+            localStorage.setItem('journal_user', currentUser);
+            localStorage.setItem('journal_color', userColor);
+
+            applyUserUI();
+            subscribeToWebPush();
+            checkAndShowAlerts(false);
+        } else {
+            document.getElementById('login-error').style.display = 'block';
+        }
     }
     function logoutUser() {
         localStorage.removeItem('journal_user');
